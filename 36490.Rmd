@@ -1,0 +1,50 @@
+---
+title: "Undergrad research"
+authors: "Alvin Pan"
+Andrew IDs: "qpan"
+output:
+  pdf_document:
+    toc: no
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab
+---
+```{r}
+library("readxl")
+library(tidyverse)
+```
+
+
+
+```{r}
+covid = data.frame(read_excel("covid1.xlsx"))
+```
+```{r}
+head(covid)
+```
+
+```{r}
+cont.cols = c(5:11,14:17)
+```
+
+
+
+```{r}
+par(mfrow=c(3,4), mar=c(4,4,2,0.5)) # Setup grid, margins
+for (j in cont.cols) {
+  hist(covid[,j], xlab=colnames(covid)[j],
+       main=paste("Hist of", colnames(covid)[j]),
+       col="lightblue", breaks=20)
+}
+```
+
+```{r}
+grouped.df = covid %>% group_by(STATE)
+```
+
+```{r}
+grouped.df %>% summarize(POP.mu = mean(POPULATION, na.rm = TRUE), NEWCONFIRMED = sum(NEWCONFIRMED, na.rm = TRUE), CUMCONFIRMED = sum(CUMCONFIRMED, na.rm = TRUE), NEWDEATHS=sum(NEWDEATHS, na.rm = TRUE), CUMDEATHS=sum(CUMDEATHS, na.rm = TRUE))
+```
+
+
