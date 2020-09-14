@@ -39,12 +39,21 @@ for (j in cont.cols) {
 }
 ```
 
+
 ```{r}
-grouped.df = covid %>% group_by(STATE)
+grouped.df = covid %>% group_by(STATE) %>% summarize(POPULATION = sum(sqrt(POPULATION), na.rm = TRUE), NEWCONFIRMED = sum(log(NEWCONFIRMED+1), na.rm = TRUE), CUMCONFIRMED = sum(log(CUMCONFIRMED+1), na.rm = TRUE), NEWDEATHS=sum(log(NEWDEATHS+1), na.rm = TRUE), CUMDEATHS=sum(log(CUMDEATHS+1), na.rm = TRUE)) %>% data.frame()
 ```
 
 ```{r}
-grouped.df %>% summarize(POP.mu = mean(POPULATION, na.rm = TRUE), NEWCONFIRMED = sum(NEWCONFIRMED, na.rm = TRUE), CUMCONFIRMED = sum(CUMCONFIRMED, na.rm = TRUE), NEWDEATHS=sum(NEWDEATHS, na.rm = TRUE), CUMDEATHS=sum(CUMDEATHS, na.rm = TRUE))
+grouped.df
 ```
 
 
+```{r}
+par(mfrow=c(2,3), mar=c(4,4,2,0.5)) # Setup grid, margins
+for (j in (2:6)) {
+  hist(grouped.df[,j], xlab=colnames(grouped.df)[j],
+       main=paste("Hist of", colnames(grouped.df)[j]),
+       col="lightblue", breaks=20)
+}
+```
