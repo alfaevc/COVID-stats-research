@@ -1,0 +1,71 @@
+---
+title: "Week3"
+author: "Melody Ma"
+date: "9/15/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+
+```{r}
+library("readxl")
+covid19 <- read_excel("JHU_COVID_CASESwPOP_20200909_public.xlsx")
+library(sp)
+library(tidyverse)
+library(ggmap)
+library(ggplot2)
+
+library(lubridate)
+library(ggseas)
+library(ggfortify)
+```
+
+```{r}
+usa <- c(left = -73.9893574 -60, bottom = 40.7589626 - 14, right = -73.9893574 + 15, top = 40.7589626 + 10)
+map <- get_stamenmap(usa, zoom = 4, maptype = "toner-hybrid")
+ggmap(map) 
+
+ggmap(map) +
+geom_point(aes(x = LONGITUDE, y = LATITUDE, size =CUMDEATHS_NORM_500 , color = CUMCD_NORM_500 ), 
+          data = covid19, alpha = .5) +
+scale_size_area(name = "CUMDEATHS_NORM_500") +
+scale_color_distiller(palette = "Spectral")
+```
+
+```{r}
+data<-data %>%
+  mutate(date = make_date(iyear, imonth))
+data <- data[is.na(data$date)== FALSE,]
+
+events_per_month <- covid19 %>%
+  group_by(DATE) %>%
+  summarize(n_events = n())
+
+covid19_time <- covid19[is.na(covid19$DATE)== FALSE,]
+
+```
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
