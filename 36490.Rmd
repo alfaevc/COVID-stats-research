@@ -20,8 +20,11 @@ library(tidyverse)
 ```{r}
 covid = data.frame(read_excel("covid1.xlsx"))
 ```
+
+
+
 ```{r}
-head(covid)
+head(covid, 10)
 ```
 
 ```{r}
@@ -56,4 +59,40 @@ for (j in (2:6)) {
        main=paste("Hist of", colnames(grouped.df)[j]),
        col="lightblue", breaks=20)
 }
+```
+
+
+```{r}
+# generate top n states with the most people
+top_pop_states <- function(data, n=5) {
+  d = data %>% group_by(STATE) %>% summarize(POPULATION = mean(POPULATION, na.rm = TRUE))
+  
+  return (top_n(d, n=n, wt=POPULATION)[[1]])                             
+}
+```
+
+
+```{r}
+# plot covid cases for top population states
+plot_states <- function(data, feature, n=5, x=2, y=3) {
+  top_states = top_pop_states(covid, n)
+  par(mfrow=c(x,y), mar=c(4,4,2,0.5)) # Setup grid, margins
+  for (state in top_states) {
+    d = data %>% filter(STATE == state) %>% select(POPULATION, DATE, NEWCONFIRMED, CUMCONFIRMED, NEWDEATHS, CUMDEATHS)
+    plot(d$DATE, d[,feature], xlab = "Time", ylab = feature, main = paste("COVID cases in", state), pch = 20)
+  }
+}
+```
+
+
+
+
+```{r}
+plot_states(covid, 'NEWDEATHS')
+```
+
+
+
+```{r}
+plot_states(covid, 'NEWCONFIRMED')
 ```
