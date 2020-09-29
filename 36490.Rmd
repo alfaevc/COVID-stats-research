@@ -22,33 +22,23 @@ covid = data.frame(read_excel("covid1.xlsx"))
 covid.g1 = data.frame(read_excel("COVID_G1.xlsx"))
 ```
 
+unify date syntax
 ```{r}
 covid$DATE = as.Date(covid$DATE)
 ```
-
 
 ```{r}
 covid.g1$DATE = as.Date(parse_date_time(covid.g1$DATE, orders="mdy"))
 ```
 
-
-
-```{r}
-head(covid.g1, 50)
-```
-
-
-
-```{r}
-head(covid, 10)
-```
-
+combine 2 data frames
 ```{r}
 covid.com = covid %>% full_join(covid.g1, by = c("STATE", "DATE"))
 ```
 
 
 ```{r}
+#function to union 2 feature vectors
 combine.attributes <- function(x, y) {
   n = length(x)
   for (i in 1:n) {
@@ -62,11 +52,7 @@ combine.attributes <- function(x, y) {
 
 
 ```{r}
-redundant.attributes = c("STUSAB", "LATITUDE", "LONGITUDE", "STATEFP", "GNISID")
-```
-
-
-```{r}
+#function to union duplicate features
 clean.combined.data <- function(data, attrs) {
   for (name in attrs) {
     data[, name] = combine.attributes(covid.com[, paste(name, ".x", sep="")], covid.com[, paste(name, ".y", sep="")])
@@ -77,37 +63,68 @@ clean.combined.data <- function(data, attrs) {
 }
 ```
 
+
 ```{r}
-covid.com = clean.combined.data(covid.com, redundant.attributes)
+#function to fill the NAs with the most recently observed non-NA for all input features of data frame
+extend.attr <- function(data, features) {
+  n = dim(data)[1]
+  for (feature in features) {
+    xs = rep(0, n)
+    index = 1
+    while (is.na(data[,feature][index])) {index = index + 1}
+    curr.x = 0
+    while (index < n+1) {
+      if (!(is.na(data[,feature][index]))) {
+        curr.x = data[,feature][index]
+      }
+      xs[index] = curr.x
+      index = index + 1
+    }
+    return (data)
+  }
+}
 ```
 
-
 ```{r}
-extend.attr <- function(data, feature) {
-  n = dim(data)[1]
-  scores = rep(0, n)
-  index = 1
-  while (is.na(data[,feature][index])) {index = index + 1}
-  curr.score = 0
-  while (index < n+1) {
-    if (!(is.na(data[,feature][index]))) {
-      curr_score = data[,feature][index]
-    }
-    scores[index] = curr_score
-    index = index + 1
-  }
-  return (scores)
+# extract top n states with the most people
+top_pop_states <- function(data, n=5) {
+  d = data %>% group_by(STATE) %>% summarize(POPULATION = mean(POPULATION, na.rm = TRUE))
+  return (top_n(d, n=n, wt=POPULATION)[[1]])                          
 }
 ```
 
 
 ```{r}
-covid.com$SCORE = extend.attr(covid.com, "SCORE")
+# plot covid cases for top population states
+plot_states <- function(data, states, feature, x=2, y=3) {
+  # top_states = top_pop_states(covid, n)
+  par(mfrow=c(x,y), mar=c(4,4,2,0.5)) # Setup grid, margins
+  for (state in states) {
+    d = data %>% filter(STATE == state) %>% select(POPULATION, DATE, NEWCONFIRMED, CUMCONFIRMED, NEWDEATHS, CUMDEATHS, SCORE)
+    plot(d$DATE, d[,feature], xlab = "Time", ylab = feature, main = paste("COVID cases in", state), pch = 20, cex = 0.5)
+  }
+}
+```
+
+
+```{r}
+duplicated.attributes = c("STUSAB", "LATITUDE", "LONGITUDE", "STATEFP", "GNISID")
+```
+
+```{r}
+covid.com = clean.combined.data(covid.com, duplicated.attributes)
+```
+
+```{r}
+covid.com = extend.attr(covid.com, c("SCORE"))
 ```
 
 ```{r}
 head(covid.com, 10)
 ```
+
+
+---------below are just random experiments
 
 
 ```{r}
@@ -150,27 +167,6 @@ for (j in (2:6)) {
 ```
 
 
-```{r}
-# generate top n states with the most people
-top_pop_states <- function(data, n=5) {
-  d = data %>% group_by(STATE) %>% summarize(POPULATION = mean(POPULATION, na.rm = TRUE))
-  return (top_n(d, n=n, wt=POPULATION)[[1]])                          
-}
-```
-
-
-```{r}
-# plot covid cases for top population states
-plot_states <- function(data, states, feature, x=2, y=3) {
-  # top_states = top_pop_states(covid, n)
-  par(mfrow=c(x,y), mar=c(4,4,2,0.5)) # Setup grid, margins
-  for (state in states) {
-    d = data %>% filter(STATE == state) %>% select(POPULATION, DATE, NEWCONFIRMED, CUMCONFIRMED, NEWDEATHS, CUMDEATHS, SCORE)
-    plot(d$DATE, d[,feature], xlab = "Time", ylab = feature, main = paste("COVID cases in", state), pch = 20, cex = 0.5)
-  }
-}
-```
-
 
 ```{r}
 head(covid.com)
@@ -186,8 +182,6 @@ plot_states(covid.com, states, 'SCORE')
 ```{r}
 plot_states(covid, 'NEWCONFIRMED')
 ```
-
-
 
 
 ```{r}
