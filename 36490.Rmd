@@ -31,11 +31,6 @@ covid$DATE = as.Date(covid$DATE)
 covid.g1$DATE = as.Date(parse_date_time(covid.g1$DATE, orders="mdy"))
 ```
 
-combine 2 data frames
-```{r}
-covid.com = covid %>% full_join(covid.g1, by = c("STATE", "DATE"))
-```
-
 
 ```{r}
 #function to union 2 feature vectors
@@ -63,6 +58,10 @@ clean.combined.data <- function(data, attrs) {
 }
 ```
 
+```{r}
+(covid.com$STATE[1] == "ALABAMA") && TRUE
+```
+
 
 ```{r}
 #function to fill the NAs with the most recently observed non-NA for all input features of data frame
@@ -70,18 +69,23 @@ extend.attr <- function(data, features) {
   n = dim(data)[1]
   for (feature in features) {
     xs = rep(0, n)
-    index = 1
-    while (is.na(data[,feature][index])) {index = index + 1}
+    prev.state = NULL
     curr.x = 0
-    while (index < n+1) {
-      if (!(is.na(data[,feature][index]))) {
-        curr.x = data[,feature][index]
+    for (i in 1:n) {
+      curr.state = data$STATE[i]
+      if (!(is.na(data[,feature][i]))) {
+        curr.x = data[, feature][i]
+      } else {
+        if (is.null(prev.state) || (curr.state != prev.state)) {
+          curr.x = 0
+          prev.state = curr.state
+        }
       }
-      xs[index] = curr.x
-      index = index + 1
-    }
-    return (data)
+      xs[i] = curr.x
+    }  
+    data[, feature] = xs
   }
+  return (data)
 }
 ```
 
@@ -100,7 +104,7 @@ plot_states <- function(data, states, feature, x=2, y=3) {
   # top_states = top_pop_states(covid, n)
   par(mfrow=c(x,y), mar=c(4,4,2,0.5)) # Setup grid, margins
   for (state in states) {
-    d = data %>% filter(STATE == state) %>% select(POPULATION, DATE, NEWCONFIRMED, CUMCONFIRMED, NEWDEATHS, CUMDEATHS, SCORE)
+    d = data %>% filter(STATE == state)
     plot(d$DATE, d[,feature], xlab = "Time", ylab = feature, main = paste("COVID cases in", state), pch = 20, cex = 0.5)
   }
 }
@@ -111,16 +115,31 @@ plot_states <- function(data, states, feature, x=2, y=3) {
 duplicated.attributes = c("STUSAB", "LATITUDE", "LONGITUDE", "STATEFP", "GNISID")
 ```
 
+combine 2 data frames
+```{r}
+covid.com = covid %>% full_join(covid.g1, by = c("STATE", "DATE"))
+```
+
+
 ```{r}
 covid.com = clean.combined.data(covid.com, duplicated.attributes)
 ```
+
+
+
+Sort data by state and then date
+```{r}
+covid.com = dplyr::arrange(covid.com, STATE, DATE)
+```
+
 
 ```{r}
 covid.com = extend.attr(covid.com, c("SCORE"))
 ```
 
 ```{r}
-head(covid.com, 10)
+states = top_pop_states(covid)
+plot_states(covid.com, states, 'SCORE')
 ```
 
 
@@ -177,6 +196,7 @@ head(covid.com)
 states = top_pop_states(covid)
 plot_states(covid.com, states, 'SCORE')
 ```
+
 
 
 ```{r}
