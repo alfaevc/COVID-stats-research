@@ -4,7 +4,7 @@
 library(tidyverse)
 library(ggplot2)
 library(dplyr)
-library(ggrepel)
+library(plotly)
 
 
 
@@ -74,3 +74,26 @@ version2_plot <- function(state){
 
 
 
+
+#############################################################
+#interactive graph with cali
+#############################################################
+state = "CALIFORNIA"
+state_data <- data[data$STATE==state,]
+state_event <- state_data[!is.na(state_data$EVENT_CATG_S),]
+state_event_date <- state_event$DATE
+plot_2 <- ggplot()+
+  geom_point(state_data, mapping=aes(x=DATE, y=NEWCD_NORM_500, event=EVENT_CATG_S),
+             shape=21, fill="black", size=4)+
+  geom_point(state_data, mapping=aes(x=DATE, y=dummy, fill=color_scale),
+             shape=22, size=4, color="transparent")+
+  scale_fill_manual(values=color_v)+
+  geom_vline(data=state_event,
+             aes(xintercept=as.numeric(DATE), color=EVENT_CATG_S), 
+             linetype="dotted")+
+  geom_text(data=state_event, mapping=aes(x=DATE, y=max(NEWCD_NORM_500),
+                                          color=EVENT_CATG_S,
+                                          label=EVENT_CATG_S), 
+            size=4, angle=90, vjust=-1, hjust=-2) +
+  labs(x='Date', y='New_Cases_Norm', title=state, fill='score')
+ggplotly(plot_2, tooltip=c("event"))
