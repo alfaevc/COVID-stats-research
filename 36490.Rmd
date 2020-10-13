@@ -18,9 +18,18 @@ library(tidyverse)
 
 
 ```{r}
-covid = data.frame(read_excel("covid1.xlsx"))
-covid.g1 = data.frame(read_excel("COVID_G1.xlsx"))
+covid = data.frame(read_excel("COVID_CASES.xlsx"))
+covid.g1 = data.frame(read_excel("COVID_ALL_G1.xlsx"))
 ```
+
+```{r}
+head(covid)
+```
+
+```{r}
+head(covid.g1)
+```
+
 
 unify date syntax
 ```{r}
@@ -112,12 +121,16 @@ plot_states <- function(data, states, feature, x=2, y=3) {
 
 
 ```{r}
-duplicated.attributes = c("STUSAB", "LATITUDE", "LONGITUDE", "STATEFP", "GNISID")
+duplicated.attributes = c("STUSAB", "LATITUDE", "LONGITUDE", "STATEFP")
 ```
 
 combine 2 data frames
 ```{r}
 covid.com = covid %>% full_join(covid.g1, by = c("STATE", "DATE"))
+```
+
+```{r}
+head(covid.com)
 ```
 
 
