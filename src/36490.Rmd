@@ -18,8 +18,8 @@ library(tidyverse)
 
 
 ```{r}
-covid = data.frame(read_excel("COVID_CASES.xlsx"))
-covid.g1 = data.frame(read_excel("COVID_ALL_G1.xlsx"))
+covid = data.frame(read_excel("../data/COVID_CASES.xlsx"))
+covid.g1 = data.frame(read_excel("../data/COVID_ALL_G1.xlsx"))
 ```
 
 ```{r}
@@ -218,6 +218,6 @@ plot_states(covid, 'NEWCONFIRMED')
 
 
 ```{r}
-write.csv(covid.com, "covid.com.csv")
+write.csv(covid.com, "../data/covid.com.csv")
 ```
 

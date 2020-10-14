@@ -1,0 +1,247 @@
+---
+title: "402 HW7"
+author: "Alvin Pan"
+student ID: qpan
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, autodep=TRUE, cache.comments=TRUE)
+```
+
+Name: Qingkai Pan
+Andrew ID: qpan  
+Collaborated with:  
+
+```{r}
+library(np)
+```
+
+
+#Q2
+```{r}
+house.train = read.csv("housetrain.csv", header = TRUE)
+house.test = read.csv("housetest.csv", header = TRUE)
+```
+
+```{r}
+house <- rbind(house.train, house.test)
+```
+
+
+#(a)
+```{r}
+plot(house$Mean_household_income, house$Median_house_value, pch = 20, cex = 0.5)
+```
+
+#(b)
+```{r}
+get.pred.error <- function(model, test) {
+  test.pred = predict(model, newdata = test)
+  return (mean((test.pred-test$Median_house_value)^2))
+}
+```
+
+
+```{r}
+err.mat = matrix(rep(0, 5*26), ncol = 5)
+```
+
+```{r}
+set.seed(0)
+samp <- sample(rep(1:5, 2121), replace = FALSE)
+```
+
+
+```{r}
+dfs = 2:27
+
+for (n in 2:27) {
+  #samp <- sample(rep(1:5, 2121), replace = FALSE)
+  for (k in 1:5) {
+    testd <- house[samp == k, ]
+    traind <- house[!(samp == k), ]
+    
+    train.rows = nrow(traind)
+    
+    sm = smooth.spline(traind$Median_house_value~traind$Mean_household_income, df=n)
+    test.pred = predict(sm, x = testd$Mean_household_income)$y
+    err.mat[n-1,k] = mean((test.pred-testd$Median_house_value)^2)
+  }
+}
+
+```
+
+
+
+```{r}
+df.err.means = apply(err.mat, 1, mean)
+```
+
+```{r}
+df.err.ses = apply(err.mat, 1, sd)/sqrt(5)
+```
+
+
+```{r}
+plot(2:27, df.err.means, xlab = "degree of freedom", ylab = "MSE average", pch = 20, cex = 0.5)
+```
+
+```{r}
+best.df = dfs[which.min(df.err.means)]
+best.df
+```
+
+
+```{r}
+plot(2:27, df.err.ses, xlab = "degree of freedom", ylab = "MSE standard error", pch = 20, cex = 0.5)
+```
+The two plots shows different minimums for the average of the MSEs and standard deviation of the MSEs. But since the MSE deviation is all between 120 and 135 for degree of freedom greater or equal to 5, which means the variation of the standard deviation is not high. So it does inspire that we do have found the ideal df.
+
+
+#(c)
+```{r}
+gaus.err.mat = matrix(rep(0, 5*11), ncol = 5)
+```
+
+
+```{r}
+bws1 = seq(4000, 7000, by=300)
+
+for (i in 1:length(bws1)) {
+  for (k in 1:5) {
+    testd <- house[samp == k, ]
+    traind <- house[!(samp == k), ]
+    
+    train.rows = nrow(traind)
+    
+    
+    gm = npreg(Median_house_value ~ Mean_household_income,
+             data = traind, bws = bws1[i])
+    gaus.err.mat[i,k] = get.pred.error(gm, testd)
+  }
+}
+```
+
+```{r}
+gaus.err.means = apply(gaus.err.mat, 1, mean)
+```
+
+```{r}
+gaus.err.ses = apply(gaus.err.mat, 1, sd)/sqrt(5)
+```
+
+
+```{r}
+plot(bws1, gaus.err.means, xlab = "bandwidth", ylab = "MSE average", pch = 20, cex = 0.5)
+```
+
+
+
+
+```{r}
+best.bw = bws1[which.min(gaus.err.means)]
+best.bw
+```
+
+```{r}
+plot(bws1, gaus.err.ses, xlab = "bandwidth", ylab = "MSE standard error", pch = 20, cex = 0.5)
+```
+The two plots shows different minimums for the average of the MSEs and standard deviation of the MSEs and both are monotonically increasing(avergae MSE monotonically increases for bandwidths >= 4300). But since the MSE standard deviation for the bandwidth with lowest average MSE is pretty close the bandwidth with the lowest standard deviation in terms of vertical distance, it does inspire that we do have found the ideal df.
+
+
+#(d)
+```{r}
+calc.df <- function(x, bw) {
+  n = length(x)
+  res = 0
+  for (i in 1:n) {
+    dinom = 0
+    for (j in 1:n) {
+      dinom = dinom + dnorm((x[i]-x[j])/bw)
+    }
+    res = res + 1/dinom
+  }
+  return (dnorm(0) * res)
+}
+```
+
+```{r, eval=FALSE}
+eff.dfs = rep(0, length(bws1))
+
+for (i in 1:length(bws1)) {
+  eff.dfs[i] = calc.df(house$Mean_household_income, bws1[i])
+}
+```
+
+
+Since it takes a long time, just copy down the result since rmarkdown takes ages.
+```{r}
+eff.dfs = c(22.46228, 20.83822, 19.42009, 18.17743, 17.08388, 16.11645, 15.25544, 14.48435, 13.78948, 13.15955, 12.58522)
+eff.dfs
+```
+
+
+
+```{r}
+plot(dfs, df.err.means, xlab = "effective degrees of freedom", ylab = "estimated MSE of prediction", pch = 20, cex = 0.5, col = 3, type = 'l')
+
+lines(eff.dfs, gaus.err.means, pch = 20, cex = 0.5, col = 5)
+
+legend("topright", legend=c("spline", "gaussian kernel"), col=c(3,5), lty=1, cex=0.7)
+```
+The MSEs for spline are lower than gaussian kernel between df = 10 and 25
+The comparison doesn't seem to be reasonable since the range and number of bandwidths for the two methods are different. Spline has more than double the number of degrees of freedom analyzed than gaussian kernel, so the conclusion would be not comprehensive. 
+
+
+#(e)
+```{r}
+plot(house$Mean_household_income, house$Median_house_value, pch = 20, cex = 0.5)
+
+best.sm = smooth.spline(house$Median_house_value~house$Mean_household_income, df=best.df)
+best.sm.pred = predict(best.sm, x = house$Mean_household_income)$y
+
+best.gm = npreg(Median_house_value ~ Mean_household_income,
+                data = house, bws = best.bw)
+
+best.gm.pred = predict(best.gm, newdata = house)
+
+d <- data.frame(cbind(Mean_household_income = house$Mean_household_income, best.sm.pred, best.gm.pred))
+
+d <- d[order(d$Mean_household_income), ]
+
+with(d, lines(Mean_household_income, best.sm.pred, xlab = "effective degrees of freedom", ylab = "estimated MSE of prediction", pch = 20, cex = 0.5, col = 3))
+
+
+with(d, lines(Mean_household_income, best.gm.pred, pch = 20, cex = 0.5, col = 5))
+
+legend("bottomright", legend=c("spline", "gaussian kernel"), col=c(3,5), lty=1, cex=0.7)
+```
+
+Gaussian kernel fit seems to be more influenced by the outlier at the 2 end of the plot and the rest of the plot is almost identical, and gaussian kernel in particular shows higher variance. This is because splines are restricted to have less degree of freedom at the extremes, enable it to not over-influenced by the outliers.
+
+```{r}
+inverse = matrix(c(14, -6, -6, 3), nrow = 2)/16
+
+X.T =  matrix(c(1,1,1,1,2,3), nrow = 2)
+X = t(X.T)
+Y = matrix(c(0,-1,2), nrow = 3)
+```
+
+```{r}
+library(MASS)
+```
+
+```{r}
+ginv(X.T %*% X)
+```
+
+```{r}
+solve(X.T %*% X) %*% X.T %*% Y
+```
+```{r}
+solve(X.T %*% X)
+```
+
