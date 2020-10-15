@@ -37,6 +37,12 @@ covid$DATE = as.Date(covid$DATE)
 ```
 
 ```{r}
+
+```
+
+
+
+```{r}
 covid.g1$DATE = as.Date(parse_date_time(covid.g1$DATE, orders="mdy"))
 ```
 
@@ -121,6 +127,23 @@ plot_states <- function(data, states, feature, x=2, y=3) {
 
 
 ```{r}
+plot_splines <- function(data, states, feature, x=2, y=3, df=12) {
+  # top_states = top_pop_states(covid, n)
+  par(mfrow=c(x,y), mar=c(4,4,2,0.5)) # Setup grid, margins
+  data = subset(data, !is.na(DATE))
+  for (state in states) {
+    d = data %>% filter(STATE == state)
+    dates = as.numeric(d$DATE)
+    plot(d$DATE, d[,feature], xlab = "Time", ylab = feature, main = paste("COVID cases in", state), pch = 20, cex = 0.5)
+    sm = smooth.spline(d[,feature]~dates, df=df)
+    sm.pred = predict(sm, dates)$y
+    lines(d$DATE, sm.pred, pch = 20, cex = 0.5, col = 3)
+  }
+}
+```
+
+
+```{r}
 duplicated.attributes = c("STUSAB", "LATITUDE", "LONGITUDE", "STATEFP")
 ```
 
@@ -153,6 +176,10 @@ covid.com = extend.attr(covid.com, c("SCORE"))
 ```{r}
 states = top_pop_states(covid)
 plot_states(covid.com, states, 'SCORE')
+```
+
+```{r}
+plot_splines(covid.com, c("PENNSYLVANIA"), 'SCORE')
 ```
 
 
