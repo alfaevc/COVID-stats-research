@@ -1,0 +1,80 @@
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(ggfortify)
+library(ggseas)
+```
+
+
+
+```{r, message=FALSE, warning=FALSE}
+data <- read_csv("covid.com.csv") %>% 
+  select(c(-1))
+
+cases_data <- data %>% 
+  filter(STATE=="WASHINGTON") %>% 
+  select(c(3, 9)) %>% 
+  na.omit()
+```
+
+```{r}
+ggplot(data.frame(cases_data), aes(DATE, NEWCD_NORM_500)) + 
+  geom_line() + 
+  labs(x = "Time index", y = "New Daily Cases Normalized")
+```
+```{r}
+ggplot(data.frame(cases_data), aes(DATE, NEWCD_NORM_500)) + 
+  geom_line(col="red") + 
+  labs(x = "Time index", y = "New Daily Cases Normalized")+
+  stat_rollapplyr(width = 7, align = "right", size = 2, alpha=.4) + 
+  ggtitle("Width = 7")
+```
+```{r}
+ggplot(data.frame(cases_data), aes(DATE, NEWCD_NORM_500)) + 
+  geom_line(col="red") + 
+  labs(x = "Time index", y = "New Daily Cases Normalized")+
+  stat_rollapplyr(width = 14, align = "right", size = 2, alpha=.4) + 
+  ggtitle("Width = 14")
+```
+
+```{r}
+#hey = list()
+
+pdf(paste("florida_Test3.pdf"))
+  #invisible(lapply(plot_lst, print))
+acf(cases_data$NEWCD_NORM_500, plot=TRUE, main="lag=30")
+acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=60, main="lag=60")
+acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=90, main="lag=90")
+dev.off()
+
+
+```
+```{r}
+n.colmeans = function(df, n = 7){
+    aggregate(x = df,
+              by = list(gl(ceiling(nrow(df)/n), n)[1:nrow(df)]),
+              FUN = sum)
+}
+
+cases_week <- n.colmeans(data.frame(cases_data$NEWCD_NORM_500))
+cases_week$week <- 1:nrow(cases_week)
+cases_week$week <- seq(from=as.Date("2020-01-23"), by="week",
+                       length.out = nrow(cases_week))
+cases_week <- cases_week %>% 
+  select(c(-1)) %>% 
+  rename(new_norm_cases = cases_data.NEWCD_NORM_500)
+```
+```{r}
+acf(cases_week$new_norm_cases, plot=TRUE, lag.max=12, main="lag=12")
+acf(cases_week$new_norm_cases, plot=TRUE, lag.max=16, main="lag=16")
+
+acf(cases_week$new_norm_cases, plot=TRUE, main="lag=30")
+```
+
+
+```{r}
+
+```
+
