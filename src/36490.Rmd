@@ -78,6 +78,7 @@ clean.combined.data <- function(data, attrs) {
 ```
 
 
+
 ```{r}
 #function to fill the NAs with the most recently observed non-NA for all input features of data frame
 extend.attr <- function(data, features) {
@@ -125,12 +126,16 @@ plot_states <- function(data, states, feature, x=2, y=3) {
 }
 ```
 
+```{r}
+
+```
+
 
 ```{r}
-plot_splines <- function(data, states, feature, x=2, y=3, df=12) {
+plot_splines <- function(data, states, feature, x=2, y=3, df=20) {
   # top_states = top_pop_states(covid, n)
   par(mfrow=c(x,y), mar=c(4,4,2,0.5)) # Setup grid, margins
-  data = subset(data, !is.na(DATE))
+  data = subset(data, !is.na(DATE) & !is.na(data[, feature]))
   for (state in states) {
     d = data %>% filter(STATE == state)
     dates = as.numeric(d$DATE)
@@ -179,7 +184,7 @@ plot_states(covid.com, states, 'SCORE')
 ```
 
 ```{r}
-plot_splines(covid.com, c("PENNSYLVANIA"), 'SCORE')
+plot_splines(covid.com, c("PENNSYLVANIA"), 'NEWCONFIRMED')
 ```
 
 
