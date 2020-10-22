@@ -14,6 +14,9 @@ output:
 library("readxl")
 library(tidyverse)
 library(np)
+library(GauPro)
+library("GPfit")
+library("lhs")
 ```
 
 
@@ -136,6 +139,24 @@ plot_smooth_func <- function(data, states, feature, method="spline", x=1, y=3, d
       sm.pred = predict(sm, dates)$y
       lines(d$DATE, sm.pred, pch = 20, cex = 0.5, col = 3)
     }
+  } else if (method == "gp") {
+    for (state in states) {
+      d = data %>% filter(STATE == state)
+      dates = as.numeric(d$DATE)
+      dates = (dates-min(dates))/(max(dates)-min(dates))
+      #kern <- Matern52$new(0)
+      #trend.0 <- trend_0$new()
+      #gpk.exp <- GauPro_kernel_model$new(matrix(dates, ncol=1), d[,feature], kernel=kern, parallel=FALSE)
+      #if (requireNamespace("MASS", quietly = TRUE)) {
+      #  plot(gpk.exp)
+      #  axis(1, at=dates, labels=d$DATE)
+      #}
+      n = length(dates)
+      x <- matrix(dates, nrow=n)
+      y <- matrix(as.vector(d[,feature]), nrow=n)
+      
+      GPmodel <- GP_fit(x, y)
+    }
   } else { #kernel regression
     for (state in states) {
       d = data %>% filter(STATE == state)
@@ -188,6 +209,9 @@ plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWC
 plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="kernel",x=1,y=2,df=20,bws=7)
 ```
 
+```{r}
+plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="gp",x=1,y=2,df=20,bws=7)
+```
 
 ---------below are just random experiments
 
@@ -243,6 +267,22 @@ states = top_pop_states(covid)
 plot_states(covid.com, states, 'SCORE')
 ```
 
+```{r}
+matrix(rexp(n), nrow=n)
+```
+
+
+```{r}
+library("GPfit")
+library("lhs")
+n <- 7
+x <- matrix(1:n/7, nrow=n)
+y <- matrix(rnorm(n), nrow=n)
+
+GPmodel <- GP_fit(x, y)
+
+plot(GPmodel)
+```
 
 
 ```{r}
