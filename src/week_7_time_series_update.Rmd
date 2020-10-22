@@ -47,7 +47,7 @@ ggplot(data.frame(cases_data), aes(DATE, NEWCD_NORM_500)) +
   #invisible(lapply(plot_lst, print))
 acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=30, main="lag=30")
 acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=60, main="lag=60")
-acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=120, main="lag=120")
+acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=90, main="lag=90")
 #acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=5, main="lag=5")
 #acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=7, main="lag=7")
 #acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=10, main="lag=10")
