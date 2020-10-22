@@ -14,7 +14,7 @@ data <- read_csv("covid.com.csv") %>%
   select(c(-1))
 
 cases_data <- data %>% 
-  filter(STATE=="NEW YORK") %>% 
+  filter(STATE=="WASHINGTON") %>% 
   select(c(3, 9)) %>% 
   na.omit()
 ```
@@ -27,7 +27,7 @@ ggplot(data.frame(cases_data), aes(DATE, NEWCD_NORM_500)) +
 ```
 ```{r}
 ggplot(data.frame(cases_data), aes(DATE, NEWCD_NORM_500)) + 
-  geom_line(col="red") + 
+  #geom_line(col="red") + 
   labs(x = "Time index", y = "New Daily Cases Normalized")+
   stat_rollapplyr(width = 7, align = "right", size = 2, alpha=.4) + 
   ggtitle("Width = 7")
@@ -45,10 +45,12 @@ ggplot(data.frame(cases_data), aes(DATE, NEWCD_NORM_500)) +
 
 #pdf(paste("florida_Test3.pdf"))
   #invisible(lapply(plot_lst, print))
-acf(cases_data$NEWCD_NORM_500, plot=TRUE, main="lag=30")
+acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=30, main="lag=30")
 acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=60, main="lag=60")
-acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=90, main="lag=90")
-acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=200, main="lag=200")
+acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=120, main="lag=120")
+#acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=5, main="lag=5")
+#acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=7, main="lag=7")
+#acf(cases_data$NEWCD_NORM_500, plot=TRUE, lag.max=10, main="lag=10")
 #dev.off()
 
 

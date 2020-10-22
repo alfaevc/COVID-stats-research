@@ -4,6 +4,9 @@ library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(readr)
+library(plotly)
+library(ggfortify)
+library(ggseas)
 data <- read_csv("covid.com.csv") %>% 
   select(c(-1))
 ```
@@ -30,6 +33,22 @@ group_event_catg <- function(x){
 }
 state_data$big_event_catg <- sapply(state_data$EVENT_CATG_S,
                                     FUN=group_event_catg)
+
+# text color bins
+bins <- c(-Inf,0,0.25,0.75,1.20,1.55,1.85,2.10,2.35,2.70,3.05,3.40,3.75,
+          4.00, 5.00)
+data$color_scale <- cut(data$SCORE, breaks=bins)
+color_v <- c("#ffffff","#fdfec0","#ffd799","#ffb078","#fc8861","#f2615d",
+             "#d8466c","#87377a","#942c81","#721f82","#51127c", "#2d1160",
+             "#ffd3d1", "#100c2e")
+
+color_event_v <- c("#ff0000","#e08c75","#f2cec4","#f2cf05","#ede02b",
+                      "#ada63e","#b3b827","#144d6b", "#07a3f5",
+                      "#81b7d4", "#a3bcc9","#cfeeff", "#9905f5","#c99fe3",
+                      "#480c6e", "#715b80", "#d324f2", "#ffffff")
+names(color_event_v) = levels(as.factor(data$EVENT_CATG_S))
+names(color_v) = levels(data$color_scale)
+
 ```
 
 
@@ -100,7 +119,7 @@ plot_lag <- function(state, lead_n){
                    col=as.factor(big_event_catg)))+
     labs(title=paste(str_to_title(state),"lag", lead_n), 
          x="Today's Norm New Confirmed Cases",
-         y=paste("Norm NC Cases", lead_n, "days ago"),
+         y=paste("Norm NC Cases", lead_n, "days later"),
          col = "Event_Category")+
     theme_bw()
   
@@ -109,12 +128,75 @@ plot_lag <- function(state, lead_n){
 ```
 
 
-5. run plot functions in specified state and lag days
+
+5. create an interactive version function for lag
+```{r}
+plot_lag_interact <- function(state, lead_n){
+  state_data <- data[data$STATE==state,]
+  state_data$big_event_catg <- sapply(state_data$EVENT_CATG_S,
+                                    FUN=group_event_catg)
+  
+  plot2 <- ggplot(data=state_data)+
+    geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=lead_n),
+                   col=as.factor(big_event_catg),
+                   Date=DATE, Event=EVENT_CATG_S))+
+    labs(title=paste(str_to_title(state),"lag", lead_n), 
+         x="Today's Norm New Confirmed Cases",
+         y=paste("Norm NC Cases", lead_n, "days later"),
+         col = "Event_Category")+
+    theme_bw()
+  
+  ggplotly(plot2, tooltip=c("x", "y", "Date", "Event"))
+}
+```
+
+
+6. Create an interactive version for the time trend
+```{r, message=FALSE, warning=FALSE}
+plot_time_interact <- function(state, window_num){
+
+  state_data <- data[data$STATE==state,]
+  state_event <- state_data[!is.na(state_data$EVENT_CATG_S),]
+  state_event_date <- state_event$DATE
+  plot3 <- ggplot(state_data, aes(DATE, NEWCD_NORM_500)) + 
+    geom_point(size=2, alpha=0.7) + 
+    stat_rollapplyr(width = window_num, align = "right", size = 2,
+                    col="purple", alpha=0.8)+
+    geom_vline(data=state_event,
+               aes(xintercept=as.numeric(DATE), color=EVENT_CATG_S), 
+               linetype="dotted")+
+    geom_text(data=state_event,
+               aes(x=DATE, y=max(NEWCD_NORM_500), color=EVENT_CATG_S,
+                   label=EVENT_CATG_S))+
+    labs(x = "Time index", y = "New Daily Cases Normalized")+
+    ggtitle(paste("Width = ", window_num))
+  ggplotly(plot3)
+}
+
+```
+
+
+**7. run plot functions in specified state and lag days
 ```{r, message=FALSE, warning=FALSE}
 state = "WASHINGTON"
-for (day in c(1, 3, 5, 7, 10)){
+for (day in c(1, 3, 5, 7, 10, 14, 30, 60, 90)){
   plot_lag(state, day)
 }
 ```
 
+
+
+**8. run interactive lag plot functions with specified state and lag days
+```{r, message=FALSE, warning=FALSE}
+state = "WASHINGTON"
+lag = 5
+plot_lag_interact(state, lag)
+```
+
+**9. run interactive time series plot with specified state and window
+```{r, message=FALSE, warning=FALSE}
+state = "WASHINGTON"
+window_num = 7
+plot_time_interact(state, window_num)
+```
 
