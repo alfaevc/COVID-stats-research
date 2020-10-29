@@ -102,6 +102,9 @@ extend.attr <- function(data, features) {
 }
 ```
 
+
+
+
 ```{r}
 # extract top n states with the most people
 top_pop_states <- function(data, n=5) {
@@ -124,6 +127,70 @@ plot_states <- function(data, states, feature, x=2, y=3) {
 ```
 
 
+```{r}
+paste(c("The best bw for", "PA", "is", as.character(10.1)), collapse=" ")
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+calc_opt_para <- function(data, state, feature, dates, method="spline") {
+  n = dim(data)[1]
+  m = n%%5
+  err.mat = matrix(rep(0, 5*50), ncol = 5)
+  
+  if (m == 0) {
+    samp = sample(rep(1:5, n%/%5), replace = FALSE)
+  } else {
+    samp = sample(c(rep(1:5, n%/%5),1:m), replace = FALSE)
+  }
+  
+  
+  if (method == "spline") {
+    dfs = 2:51
+    for (df in dfs) {
+      for (k in 1:5) {
+        testd <- data[samp == k, ] 
+        traind <- data[!(samp == k), ]
+        train.rows = nrow(traind)
+        sm = smooth.spline(traind[,feature]~dates[!(samp == k)], df=df)
+        sm.pred = predict(sm, dates[samp == k])$y
+        err.mat[df-1,k] = mean((sm.pred-testd[,feature])^2)
+      }
+    }
+    df.err.means = apply(err.mat, 1, mean)
+    best.df = dfs[which.min(df.err.means)]
+    
+    print(paste(c("The best spline df for", state, "is", as.character(best.df)), collapse=" "))
+    return(best.df)
+    
+  } else { #kernel regression
+    bs = 2:51
+    for (b in bs) {
+      for (k in 1:5) {
+        testd <- data[samp == k, ] 
+        traind <- data[!(samp == k), ]
+        train.rows = nrow(traind)
+        gm = npreg(dates[!(samp == k)], traind[,feature], bws = b)
+        gm.pred = predict(gm, newdata=dates[samp == k])
+        err.mat[b-1,k] = mean((gm.pred-testd[,feature])^2)
+      }
+    }
+    bws.err.means = apply(err.mat, 1, mean)
+    print(bws.err.means)
+    best.bw = bs[which.min(bws.err.means)]
+    
+    print(paste(c("The best kernel bw for", state, "is", as.character(best.bw)), collapse=" "))
+    
+    return(best.bw)
+  }
+}
+```
+
 
 ```{r}
 plot_smooth_func <- function(data, states, feature, method="spline", x=1, y=3, df=20, bws=10) {
@@ -135,6 +202,9 @@ plot_smooth_func <- function(data, states, feature, method="spline", x=1, y=3, d
       d = data %>% filter(STATE == state)
       dates = as.numeric(d$DATE)
       plot(d$DATE, d[,feature], xlab = "Time", ylab = feature, main = paste("COVID cases in", state), pch = 20, cex = 0.5)
+      if (is.null(df)) {
+        df = calc_opt_para(d, state, feature, dates, method)
+      }
       sm = smooth.spline(d[,feature]~dates, df=df)
       sm.pred = predict(sm, dates)$y
       lines(d$DATE, sm.pred, pch = 20, cex = 0.5, col = 3)
@@ -162,6 +232,9 @@ plot_smooth_func <- function(data, states, feature, method="spline", x=1, y=3, d
       d = data %>% filter(STATE == state)
       dates = as.numeric(d$DATE)
       plot(d$DATE, d[,feature], xlab = "Time", ylab = feature, main = paste("COVID cases in", state), pch = 20, cex = 0.5)
+      if (is.null(bws)) {
+        bws = calc_opt_para(d, state, feature, dates, method)
+      }
       gm = npreg(dates, d[,feature], bws = bws)
       gm.pred = predict(gm, newdata=dates)
       lines(d$DATE, gm.pred, pch = 20, cex = 0.5, col = 5)
@@ -201,12 +274,12 @@ plot_states(covid.com, states, 'SCORE')
 ```
 
 ```{r}
-plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="spline",x=1,y=2,df=20,bws=7)
+plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="spline",x=1,y=2,df=NULL,bws=7)
 ```
 
 
 ```{r}
-plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="kernel",x=1,y=2,df=20,bws=7)
+plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="kernel",x=1,y=2,df=20,bws=NULL)
 ```
 
 ```{r}
@@ -283,6 +356,8 @@ GPmodel <- GP_fit(x, y)
 
 plot(GPmodel)
 ```
+
+
 
 
 ```{r}
