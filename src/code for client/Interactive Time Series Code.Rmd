@@ -1,4 +1,4 @@
-1. import libraries and and dataset
+1. import libraries and and dataset - no need to change
 ```{r, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggplot2)
@@ -14,7 +14,7 @@ data <- read_csv("covid.com.csv") %>%
 ```
 
 
-2. preprocess data
+2. preprocess data - no need to change
 ```{r}
 
 # add number line
@@ -69,9 +69,8 @@ bins <- c(-Inf,0,0.25,0.75,1.20,1.55,1.85,2.10,2.35,2.70,3.05,3.40,3.75,
           4.00, 5.00)
 data$color_scale <- cut(data$SCORE, breaks=bins)
 color_v <- c("#ffffff","#fdfec0", "#fdffa3","#ffd799", "#ffb078","#fc8861",
-             "#f2615d",
-             "#d8466c","#87377a","#942c81","#721f82","#51127c", "#2d1160",
-             "#ffd3d1")
+             "#f2615d","#d8466c","#87377a","#942c81","#721f82","#51127c",
+             "#2d1160","#ffd3d1","#100c2E")
 
 color_event_v <- c("#ff0000","#e08c75","#f2cec4","#f2cf05","#ede02b",
                       "#ada63e","#b3b827","#144d6b", "#07a3f5",
@@ -99,7 +98,7 @@ text_y_pos <- function(state_event, days_diff, space_decs,
 ```
 
 
-3. Create an interactive version for the time trend
+3. Create an interactive version for the time trend - no need to change
 ```{r, message=FALSE, warning=FALSE}
 
 plot_time_interact <- function(state, window_num, days_diff, space_desc,
@@ -136,14 +135,28 @@ plot_time_interact <- function(state, window_num, days_diff, space_desc,
 ```
 
 
-**** 4. run interactive time series plot with specified state and window
+***** 4. run interactive time series plot with specified state and window
+change variables for different states, moving average window, and aesthetic
 ```{r, message=FALSE, warning=FALSE}
-state = "NEBRASKA"
+# identify which individual state
+state = "FLORIDA"
+# identify the window(days) for moving averages
 window_num = 7
-days_diff = 15
-space_desc = 42
-label_position_offset = 220 
-y_axis_max = 420
-plot_time_interact(state, window_num, days_diff, space_desc,
+
+# the next four variables are for aesthetic only 
+# changing these variables can lesson the problems of text overlapping
+
+# if days_diff is too small, all the neighboring intervention texts will overlap
+days_diff = 20
+# identify how much we want to separate this intervention text from last
+# intervention text
+space_decs = 58
+# y position of highest text label
+label_position_offset = 350 
+# y axis max height
+y_axis_max = 600
+
+# function to plog interactive time series - no need to change
+plot_time_interact(state, window_num, days_diff, space_decs,
                    label_position_offset, y_axis_max)
 ```

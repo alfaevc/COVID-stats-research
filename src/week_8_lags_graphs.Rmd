@@ -14,11 +14,7 @@ data <- read_csv("covid.com.csv") %>%
 
 2. preprocess data
 ```{r}
-# choose which state
-state = "WASHINGTON"
-state_data <- data %>% 
-  filter(STATE==state) %>% 
-  select(c(3, 9, 14, 15))
+
 
 # group event categories into easing/lifting and imposing
 group_event_catg <- function(x){
@@ -32,8 +28,8 @@ group_event_catg <- function(x){
     new_col <- append(new_col, x)
   }
 }
-state_data$big_event_catg <- sapply(state_data$EVENT_CATG_S,
-                                    FUN=group_event_catg)
+#state_data$big_event_catg <- sapply(state_data$EVENT_CATG_S,
+                                    #FUN=group_event_catg)
 
 # text color bins
 bins <- c(-Inf,0,0.25,0.75,1.20,1.55,1.85,2.10,2.35,2.70,3.05,3.40,3.75,
@@ -57,56 +53,56 @@ data$is_weekend <- is.weekend(chron(as.numeric(data$DATE)))
 
 3. plot lag graphs
 ```{r, message=FALSE, warning=FALSE}
-# 1 day lag
-ggplot(data=state_data)+
-  geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500),
-                 col=as.factor(big_event_catg)))+
-  labs(title=paste(str_to_title(state),"lag 1"), 
-       x="Today's Norm New Confirmed Cases",
-       y="Tomorrow's Norm NC Cases",
-       col = "Event_Category")+
-  theme_bw()
-
-# 3 day lag
-ggplot(data=state_data)+
-  geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=3),
-                 col=as.factor(big_event_catg)))+
-  labs(title=paste(str_to_title(state),"lag 3"), 
-       x="Today's Norm New Confirmed Cases",
-       y="Norm NC Cases 3 days later",
-       col = "Event_Category")+
-  theme_bw()
-
-# 5 day lag
-ggplot(data=state_data)+
-  geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=5),
-                 col=as.factor(big_event_catg)))+
-  labs(title=paste(str_to_title(state),"lag 5"), 
-       x="Today's Norm New Confirmed Cases",
-       y="Norm NC Cases 5 days later",
-       col = "Event_Category")+
-  theme_bw()
-
-# 7 day lag
-ggplot(data=state_data)+
-  geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=7),
-                 col=as.factor(big_event_catg)))+
-  labs(title=paste(str_to_title(state),"lag 7"), 
-       x="Today's Norm New Confirmed Cases",
-       y="Norm NC Cases 7 days later",
-       col = "Event_Category")+
-  theme_bw()
-
-# 10 day lag
-ggplot(data=state_data)+
-  geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=10),
-                 col=as.factor(big_event_catg)))+
-  labs(title=paste(str_to_title(state),"lag 10"), 
-       x="Today's Norm New Confirmed Cases",
-       y="Norm NC Cases 10 days later",
-       col = "Event_Category")+
-  theme_bw()
-  
+# # 1 day lag
+# ggplot(data=state_data)+
+#   geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500),
+#                  col=as.factor(big_event_catg)))+
+#   labs(title=paste(str_to_title(state),"lag 1"), 
+#        x="Today's Norm New Confirmed Cases",
+#        y="Tomorrow's Norm NC Cases",
+#        col = "Event_Category")+
+#   theme_bw()
+# 
+# # 3 day lag
+# ggplot(data=state_data)+
+#   geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=3),
+#                  col=as.factor(big_event_catg)))+
+#   labs(title=paste(str_to_title(state),"lag 3"), 
+#        x="Today's Norm New Confirmed Cases",
+#        y="Norm NC Cases 3 days later",
+#        col = "Event_Category")+
+#   theme_bw()
+# 
+# # 5 day lag
+# ggplot(data=state_data)+
+#   geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=5),
+#                  col=as.factor(big_event_catg)))+
+#   labs(title=paste(str_to_title(state),"lag 5"), 
+#        x="Today's Norm New Confirmed Cases",
+#        y="Norm NC Cases 5 days later",
+#        col = "Event_Category")+
+#   theme_bw()
+# 
+# # 7 day lag
+# ggplot(data=state_data)+
+#   geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=7),
+#                  col=as.factor(big_event_catg)))+
+#   labs(title=paste(str_to_title(state),"lag 7"), 
+#        x="Today's Norm New Confirmed Cases",
+#        y="Norm NC Cases 7 days later",
+#        col = "Event_Category")+
+#   theme_bw()
+# 
+# # 10 day lag
+# ggplot(data=state_data)+
+#   geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=10),
+#                  col=as.factor(big_event_catg)))+
+#   labs(title=paste(str_to_title(state),"lag 10"), 
+#        x="Today's Norm New Confirmed Cases",
+#        y="Norm NC Cases 10 days later",
+#        col = "Event_Category")+
+#   theme_bw()
+#   
 ```
 
 
@@ -122,15 +118,19 @@ plot_lag <- function(state, lead_n){
   corr <- round(acf(na.omit(state_data$NEWCD_NORM_500),
                                lag.max=lead_n, 
               plot=FALSE)[lead_n]$acf[1], digits=2)
+  
   plot <- ggplot(data=state_data)+
     geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=lead_n),
-                   col=as.factor(big_event_catg), alpha=0.9,
-                   shape=as.factor(is_weekend)))+
+                   col=as.factor(big_event_catg),
+                   alpha=as.factor(big_event_catg)), size=2)+
+    scale_color_manual(values=c("red","blue","white"),name="Event Category",
+                        labels=c("Ease/Lifting", "Mandatory/Re-issued"))+
+    scale_alpha_manual(values=c(1,1,0))+
     geom_line(data=data.frame(identity_x, identity_y),
               aes(x=identity_x, y=identity_y), linetype="dotted", size=1)+
     labs(title=paste(str_to_title(state),"lag", lead_n, "correlation=", corr), 
          x="Today's Norm New Confirmed Cases",
-         y=paste("Norm NC Cases", lead_n, "days later"),
+         y=paste("Normalized New Daily Cases", lead_n, "days later"),
          col = "Event_Category")+
     theme_bw()
   
@@ -146,11 +146,10 @@ plot_lag_interact <- function(state, lead_n){
   state_data <- data[data$STATE==state,]
   state_data$big_event_catg <- sapply(state_data$EVENT_CATG_S,
                                     FUN=group_event_catg)
+
   identity_x <- seq(0, max(na.omit(state_data$NEWCD_NORM_500)), by=1)
   identity_y <- identity_x
-  corr <- round(acf(na.omit(state_data$NEWCD_NORM_500),
-                               lag.max=lead_n, 
-              plot=FALSE)[lead_n]$acf[1], digits=2)
+  
   
   plot2 <- ggplot(data=state_data)+
     geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=lead_n),
@@ -170,35 +169,11 @@ plot_lag_interact <- function(state, lead_n){
 ```
 
 
-6. Create an interactive version for the time trend
-```{r, message=FALSE, warning=FALSE}
-plot_time_interact <- function(state, window_num){
-
-  state_data <- data[data$STATE==state,]
-  state_event <- state_data[!is.na(state_data$EVENT_CATG_S),]
-  state_event_date <- state_event$DATE
-  plot3 <- ggplot(state_data, aes(DATE, NEWCD_NORM_500)) + 
-    geom_point(size=2, alpha=0.7) + 
-    stat_rollapplyr(width = window_num, align = "right", size = 2,
-                    col="purple", alpha=0.8)+
-    geom_vline(data=state_event,
-               aes(xintercept=as.numeric(DATE), color=EVENT_CATG_S), 
-               linetype="dotted")+
-    geom_text(data=state_event,
-               aes(x=DATE, y=max(NEWCD_NORM_500), color=EVENT_CATG_S,
-                   label=EVENT_CATG_S))+
-    labs(x = "Time index", y = "New Daily Cases Normalized")+
-    ggtitle(paste("Width = ", window_num))
-  ggplotly(plot3)
-}
-
-```
-
 
 **7. run plot functions in specified state and lag days
 ```{r, message=FALSE, warning=FALSE}
-state = "WASHINGTON"
-for (day in c(1, 3, 5, 7, 10, 14, 21, 30, 60, 90)){
+state = "WISCONSIN"
+for (day in c(14, 21, 30, 45, 60, 90)){
   plot_lag(state, day)
 }
 ```
@@ -207,7 +182,7 @@ for (day in c(1, 3, 5, 7, 10, 14, 21, 30, 60, 90)){
 
 **8. run interactive lag plot functions with specified state and lag days
 ```{r, message=FALSE, warning=FALSE}
-state = "TEXAS"
+state = "WISCONSIN"
 lag = 60
 plot_lag_interact(state, lag)
 ```

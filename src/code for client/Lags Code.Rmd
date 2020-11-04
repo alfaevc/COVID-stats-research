@@ -1,0 +1,91 @@
+1. import libraries and and dataset - no need to change
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(ggseas)
+library(chron)
+data <- read_csv("covid.com.csv") %>% 
+  select(c(-1))
+```
+
+2. preprocess data - no need to change
+```{r}
+
+
+# group event categories into easing/lifting and imposing
+group_event_catg <- function(x){
+  new_col = c()
+  check = substr(x, nchar(x), nchar(x))
+  if(check %in% c("M", "R")){
+    new_col <- append(new_col, "Mandatory/Recommended")
+  } else if (check %in% c("E", "L")){
+    new_col <- append(new_col, "Ease/Lifting")
+  } else {
+    new_col <- append(new_col, x)
+  }
+}
+#state_data$big_event_catg <- sapply(state_data$EVENT_CATG_S,
+                                    #FUN=group_event_catg)
+
+# text color bins
+bins <- c(-Inf,0,0.25,0.75,1.20,1.55,1.85,2.10,2.35,2.70,3.05,3.40,3.75,
+          4.00, 5.00)
+data$color_scale <- cut(data$SCORE, breaks=bins)
+color_v <- c("#ffffff","#fdfec0","#ffd799","#ffb078","#fc8861","#f2615d",
+             "#d8466c","#87377a","#942c81","#721f82","#51127c", "#2d1160",
+             "#ffd3d1", "#100c2e")
+
+color_event_v <- c("#ff0000","#e08c75","#f2cec4","#f2cf05","#ede02b",
+                      "#ada63e","#b3b827","#144d6b", "#07a3f5",
+                      "#81b7d4", "#a3bcc9","#cfeeff", "#9905f5","#c99fe3",
+                      "#480c6e", "#715b80", "#d324f2", "#ffffff")
+names(color_event_v) = levels(as.factor(data$EVENT_CATG_S))
+names(color_v) = levels(data$color_scale)
+
+data$is_weekend <- is.weekend(chron(as.numeric(data$DATE)))
+
+```
+
+
+
+3. Create a function for lag plot - no need to change
+```{r}
+plot_lag <- function(state, lead_n){
+  state_data <- data[data$STATE==state,]
+  identity_x <- seq(0, max(na.omit(state_data$NEWCD_NORM_500)), by=1)
+  identity_y <- identity_x
+  state_data$big_event_catg <- sapply(state_data$EVENT_CATG_S,
+                                    FUN=group_event_catg)
+  
+  corr <- round(acf(na.omit(state_data$NEWCD_NORM_500),
+                               lag.max=lead_n, 
+              plot=FALSE)[lead_n]$acf[1], digits=2)
+  
+  plot <- ggplot(data=state_data)+
+    geom_point(aes(x=NEWCD_NORM_500, y=lead(NEWCD_NORM_500, n=lead_n),
+                   col=as.factor(big_event_catg)), size=2)+
+    scale_color_manual(values=c("red","blue"),name="Event Category",
+                        labels=c("Ease/Lifting", "Mandatory/Re-issued", ""))+
+    geom_line(data=data.frame(identity_x, identity_y),
+              aes(x=identity_x, y=identity_y), linetype="dotted", size=1)+
+    labs(title=paste(str_to_title(state),"lag", lead_n, "correlation=", corr), 
+         x="Today's Norm New Confirmed Cases",
+         y=paste("Normalized New Daily Cases", lead_n, "days later"))+
+    theme_bw()
+  
+  print(plot)
+}
+```
+
+
+
+*****4. run plot functions in specified state and lag days
+```{r, message=FALSE, warning=FALSE}
+state = "WISCONSIN"
+lag_day = 14
+plot_lag(state, lag_day) #function to plot - no need to change
+```
+
+
+
