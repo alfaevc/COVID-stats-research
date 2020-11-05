@@ -68,9 +68,10 @@ data$event <- paste(data$big_cat, "\n", data$event_MELR)
 bins <- c(-Inf,0,0.25,0.75,1.20,1.55,1.85,2.10,2.35,2.70,3.05,3.40,3.75,
           4.00, 5.00)
 data$color_scale <- cut(data$SCORE, breaks=bins)
+
 color_v <- c("#ffffff","#fdfec0", "#fdffa3","#ffd799", "#ffb078","#fc8861",
              "#f2615d","#d8466c","#87377a","#942c81","#721f82","#51127c",
-             "#2d1160","#ffd3d1","#100c2E")
+             "#2d1160","#100c2E","#080617")
 
 color_event_v <- c("#ff0000","#e08c75","#f2cec4","#f2cf05","#ede02b",
                       "#ada63e","#b3b827","#144d6b", "#07a3f5",
