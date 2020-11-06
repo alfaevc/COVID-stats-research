@@ -53,7 +53,7 @@ big_catg <- function(x){
 }
 
 data$big_cat <- sapply(data$EVENT_CATG_S, FUN=big_catg)
-data$event <- paste(data$big_cat, "\n", data$event_MELR)
+data$event <- paste(data$big_cat, data$event_MELR)
 
 
 
@@ -76,23 +76,6 @@ lag_catg <- function(x){
 data$lag_catg <- sapply(data$EVENT_CATG_S, FUN=lag_catg)
 
 
-# # text color bins
-# bins <- c(-Inf,0,0.25,0.75,1.20,1.55,1.85,2.10,2.35,2.70,3.05,3.40,3.75,
-#           4.00, 5.00)
-# data$color_scale <- cut(data$SCORE, breaks=bins)
-# color_v <- c("#ffffff","#fdfec0","#ffd799","#ffb078","#fc8861","#f2615d",
-#              "#d8466c","#87377a","#942c81","#721f82","#51127c", "#2d1160",
-#              "#ffd3d1", "#100c2e")
-# 
-# color_event_v <- c("#ff0000","#e08c75","#f2cec4","#f2cf05","#ede02b",
-#                       "#ada63e","#b3b827","#144d6b", "#07a3f5",
-#                       "#81b7d4", "#a3bcc9","#cfeeff", "#9905f5","#c99fe3",
-#                       "#480c6e", "#715b80", "#d324f2", "#ffffff")
-# names(color_event_v) = levels(as.factor(data$EVENT_CATG_S))
-# names(color_v) = levels(data$color_scale)
-# 
-# data$is_weekend <- is.weekend(chron(as.numeric(data$DATE)))
-
 ```
 
 
@@ -107,7 +90,13 @@ plot_lag <- function(state, lead_n){
   corr <- round(acf(na.omit(state_data$NEWCD_NORM_500),
                                lag.max=lead_n, 
               plot=FALSE)[lead_n]$acf[1], digits=2)
-  state_data$n_lead <- lead(state_data$NEWCD_NORM_500, n=lead_n)
+  state_data$n_lead = rep(NA, nrow(state_data))
+  for (i in 1:(nrow(state_data)-lead_n)){
+    today = state_data[i, 3]
+    n_day_after = today+lead_n
+    inst = state_data[as.character(state_data$DATE)==as.character(n_day_after[1,1]),]
+    state_data$n_lead[i] = inst$NEWCD_NORM_500
+  }
   state_data_cut <- state_data[!is.na(state_data$lag_catg),]
   
   plot2 <- ggplot(data=state_data_cut)+
@@ -134,8 +123,8 @@ plot_lag <- function(state, lead_n){
 
 *****4. run plot functions in specified state and lag days
 ```{r, message=FALSE, warning=FALSE}
-state = "WISCONSIN"
-lag_day = 14
+state = "CALIFORNIA"
+lag_day = 28
 plot_lag(state, lag_day) #function to plot - no need to change
 ```
 
