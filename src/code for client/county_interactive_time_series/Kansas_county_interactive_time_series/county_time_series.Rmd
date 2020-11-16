@@ -1,0 +1,172 @@
+1. import libraries and and dataset
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(ggseas)
+
+#data <- read.csv("covid.com.csv",
+#                 colClasses = "character") %>% 
+#  select(c(2,3,4,9:12,17,18,19,20,21,22,23))
+
+data <- read.csv("covid.com.csv",
+                 colClasses = "character")
+colnames(data)[25] <- "EVENT_CATG"
+county_dt <- read.csv("USA_Counties_Data.csv",
+                      colClasses = "character") %>% 
+  select(c(2,3,7))
+
+```
+
+
+2. preprocess data
+```{r}
+# change cols format
+data$DATE <- as.Date(data$DATE)
+
+for (i in 4:12){
+  data[,i]<- as.numeric(data[,i])
+}
+
+county_dt$POPULATION.2017. <- as.numeric(county_dt$POPULATION.2017.)
+# change county data to all caps
+county_dt$NAME <- toupper(county_dt$NAME)
+county_dt$STATE_NAME <- toupper(county_dt$STATE_NAME)
+colnames(county_dt) <- c("COUNTY","STATE", "POPULATION")
+
+data <- inner_join(data, county_dt, by=c("COUNTY", "STATE")) 
+table(data$EVENT_CATG)
+```
+
+rescale data
+```{r}
+data$CUMCD_NORM_500 <- round(data$CUMCONFIRMED/(data$POPULATION/50000))
+data$NEWCD_NORM_500 <- round(data$NEWCONFIRMED/(data$POPULATION/50000))
+#data$CUMDEATHS_NORM_500 <- round(data$CUMDEATHS/(data$POPULATION/50000))
+#data$NEWDEATHS_NORM_500 <- round(data$NEWDEATHS/(data$POPULATION/50000))
+```
+
+
+```{r}
+# change category events name
+# group event categories into easing/lifting and imposing
+group_event_catg <- function(x){
+  new_col = c()
+  check = substr(x, nchar(x), nchar(x))
+  if (is.na(check)){
+    new_col <- append(new_col, x)
+  } else if(check == "M"){
+    new_col <- append(new_col, "Mandatory")
+  } else if (check == "R"){
+    new_col <- append(new_col, "Re-Issued")
+  } else if (check == "E"){
+    new_col <- append(new_col, "Eased")
+  } else if (check == "L"){
+    new_col <- append(new_col, "Lifted ")
+  } else {
+    new_col <- append(new_col, "Mandatory")
+  }
+}
+data$event_MELR <- sapply(data$EVENT_CATG, FUN=group_event_catg)
+
+# category num
+big_catg <- function(x){
+  new_col = c()
+  if (is.na(x)){
+    new_col <- append(new_col, x)
+  } 
+  else if(x %in% c("15COM","15CYL","15CYM","15M2","15M3","15SM")){
+    new_col <- append(new_col, "Face \n Covering")
+  } else if(grepl("2", x)){
+    new_col <- append(new_col, "Business \n Restrictions")
+  } else if(grepl("3", x)){
+    new_col <- append(new_col, "Indoor Gathering \n Restrictions")
+  } else if(grepl("4", x)){
+    new_col <- append(new_col, "Restaurant/Bar \n Restrictions")
+  } else{
+    new_col <- append(new_col, "Stay at Home \n Orders")
+  }
+}
+
+data$big_cat <- sapply(data$EVENT_CATG, FUN=big_catg)
+data$event <- paste(data$big_cat, "\n", data$event_MELR)
+
+
+
+color_event_v <- c("#ff0000","#e08c75","#f2cec4","#f2cf05","#ede02b",
+                      "#ada63e","#b3b827","#144d6b", "#07a3f5",
+                      "#81b7d4", "#a3bcc9","#cfeeff", "#9905f5","#c99fe3",
+                      "#480c6e", "#715b80", "#d324f2", "#ffffff")
+names(color_event_v) = levels(as.factor(data$event))
+
+
+
+
+text_y_pos <- function(ct_data, ct_event, days_diff, space_decs,
+                       label_position_offset){
+  y_pos_vec = c(max(ct_data[,8], na.rm=TRUE)+label_position_offset)
+  for (i in 2:nrow(ct_event)){
+    diff = ct_event[i,"DATE"] - ct_event[i-1,"DATE"]
+    if (as.integer(diff)<days_diff){
+      tmp = y_pos_vec[i-1]-space_decs
+       y_pos_vec = append(y_pos_vec, tmp)
+    } else {
+      y_pos_vec = append(y_pos_vec, max(ct_data[,8],
+                                        na.rm=TRUE)+label_position_offset)
+    }
+  }
+  return(y_pos_vec)
+}
+
+```
+
+
+3. Create an interactive version for the time trend
+```{r, message=FALSE, warning=FALSE}
+
+plot_time_interact <- function(state, county, window_num, days_diff, space_desc,
+                   label_position_offset, y_axis_max){
+  ct_data <- data[data$STATE==state & data$COUNTY==county,]
+  ct_event <- ct_data[!is.na(ct_data$EVENT_CATG),]
+  ct_event_date <- ct_event$DATE
+  ct_event$txt_y <- text_y_pos(ct_data, ct_event, days_diff, space_desc,
+                       label_position_offset)
+  
+  plot3 <- ggplot(ct_data, aes(DATE, NEWCD_NORM_500)) + 
+    geom_point(aes(Date=DATE, New_Cases=NEWCD_NORM_500), size=2, alpha=1) + 
+    stat_rollapplyr(width = window_num, align = "right", size = 1.5,
+                    col="gray", alpha=1)+
+    geom_vline(data=ct_event,
+               aes(xintercept=as.numeric(DATE), color=event), 
+               linetype="dotted")+
+    geom_text(data=ct_event, aes(x=DATE, 
+                                 y=txt_y, color=event, Date=DATE, label=event),
+              size=3)+
+    ylim(0, y_axis_max)+
+    theme(legend.title=element_blank())+
+    labs(x = "Months", y = "New Daily Cases Normalized")+
+    scale_x_date(date_breaks = "months" , date_labels = "%b")+
+    ggtitle(paste(county, ",",state,"", "Average Window = ", window_num)) 
+    
+  p1 <- ggplotly(plot3, tooltip=c("Date", "New_Cases")) %>% 
+    layout(legend=list(title=list(text='<b> Event</b>')))
+  p1
+
+}
+
+```
+
+
+**** 4. run interactive time series plot with specified state and window
+```{r, message=FALSE, warning=FALSE}
+state = "KANSAS"
+county = "JOHNSON"
+window_num = 7
+days_diff = 10
+space_desc = 10
+label_position_offset = -20
+y_axis_max = 80
+plot_time_interact(state, county, window_num, days_diff, space_desc,
+                   label_position_offset, y_axis_max)
+```
