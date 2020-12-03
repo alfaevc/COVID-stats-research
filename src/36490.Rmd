@@ -274,7 +274,7 @@ plot_states(covid.com, states, 'SCORE')
 ```
 
 ```{r}
-plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="spline",x=1,y=2,df=NULL,bws=7)
+plot_smooth_func(covid.com, c("FLORIDA"), 'NEWCD_NORM_500', method="spline",x=1,y=2,df=NULL,bws=7)
 ```
 
 
@@ -285,6 +285,7 @@ plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWC
 ```{r}
 plot_smooth_func(covid.com, c("PENNSYLVANIA", "WASHINGTON", "CALIFORNIA"), 'NEWCD_NORM_500', method="gp",x=1,y=2,df=20,bws=7)
 ```
+
 
 ---------below are just random experiments
 
