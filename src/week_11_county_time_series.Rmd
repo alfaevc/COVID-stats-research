@@ -119,28 +119,18 @@ names(color_v) = levels(data$color_scale)
 
 # change color scale
 data$event <- as.factor(data$event)
-color_event_v <- c("Business \n Restrictions \n Eased"="#f7b0b0",
-                   "Business \n Restrictions \n Lifted "="#ffd4d4",
-                   "Business \n Restrictions \n Mandatory"="#f77c7c",
-                   "Business \n Restrictions \n Re-Issued"="#f77c7c",
-                   "Face \n Covering \n Mandatory"="#f77c7c",
-                   "Indoor Gathering \n Restrictions \n Eased"="#ffe4ab",
-                   "Indoor Gathering \n Restrictions \n Mandatory"="#f7be60",
-                  "Indoor Gathering \n Restrictions \n Re-Issued"="#f77c7c",
-                  "Restaurant/Bar \n Restrictions \n Eased"="#b3eafc",
-                  "Restaurant/Bar \n Restrictions \n Mandatory"="#7adeff",
-                  "Restaurant/Bar \n Restrictions \n Re-Issued"="#00bdfc",
-                  "black")
-# color_event_v <- c("#ff0000","#e08c75","#f2cec4","#f2cf05","#ede02b",
-#                       "#ada63e","#b3b827","#144d6b", "#07a3f5",
-#                       "#81b7d4", "#a3bcc9")
-
-
-color_k12_event <- c("#000000")
-names(color_k12_event) = levels(k12_dt$event_label)
-
-
-
+color_event_v <- c("Business \n Restrictions \n Eased"="#ff8457",
+                   "Business \n Restrictions \n Lifted "="#d16943",
+                   "Business \n Restrictions \n Mandatory"="#ff3333",
+                   "Business \n Restrictions \n Re-Issued"="#ab1111",
+                   "Face \n Covering \n Mandatory"="#e009c0",
+                   "Indoor Gathering \n Restrictions \n Eased"="#00d9ce",
+                   "Indoor Gathering \n Restrictions \n Mandatory"="#02a877",
+                  "Indoor Gathering \n Restrictions \n Re-Issued"="#016346",
+                  "Restaurant/Bar \n Restrictions \n Eased"="#23b1d9",
+                  "Restaurant/Bar \n Restrictions \n Mandatory"="#0082e6",
+                  "Restaurant/Bar \n Restrictions \n Re-Issued"="#004f8c",
+                  "K-12"="black")
 
 text_y_pos <- function(ct_data, ct_event, days_diff, space_decs,
                        label_position_offset){
@@ -165,7 +155,7 @@ text_y_pos <- function(ct_data, ct_event, days_diff, space_decs,
 ```{r, message=FALSE, warning=FALSE}
 
 plot_time_interact <- function(state, county, window_num, days_diff, space_desc,
-                   label_position_offset, y_axis_max){
+                   label_position_offset, y_axis_max, k12_text_y){
   ct_data <- data[data$STATE==state & data$COUNTY==county,]
   ct_event <- ct_data[!is.na(ct_data$EVENT_CATG),]
   ct_event_date <- ct_event$DATE
@@ -173,27 +163,27 @@ plot_time_interact <- function(state, county, window_num, days_diff, space_desc,
                        label_position_offset)
   
   ct_k12 <- k12_dt[k12_dt$STATE==state & k12_dt$COUNTY==county,]
-  ct_k12$txt_y <- rep(y_axis_max, nrow(ct_k12))
+  ct_k12$txt_y <- rep(k12_text_y, nrow(ct_k12))
 
   
   plot3 <- ggplot(ct_data, aes(DATE, NEWCD_NORM_500)) + 
     geom_point(aes(Date=DATE, New_Cases=NEWCD_NORM_500), size=2, alpha=1) + 
     stat_rollapplyr(width = window_num, align = "right", size = 1.5,
                     col="gray", alpha=1)+
+    geom_vline(data=ct_k12, aes(xintercept=as.numeric(DATE), color=event_label),
+               linetype="solid")+
+    geom_text(data=ct_k12, aes(x=DATE, y=txt_y, color=event_label,
+                               label=as.character(event_label),
+                               descript=SHORT_DESCRIPT),
+              size=3)+
     geom_vline(data=ct_event,
                aes(xintercept=as.numeric(DATE), color=event), 
                linetype="dotted")+
     geom_text(data=ct_event, aes(x=DATE, y=txt_y, color=event, Date=DATE,
-                                 label=event, descript=SHORT_DESCRIPT),
+                                 label=as.character(event),
+                                 descript=SHORT_DESCRIPT),
               size=3)+
     scale_color_manual(values=color_event_v)+
-    geom_vline(data=ct_k12, aes(xintercept=as.numeric(DATE), color=event_label),
-               linetype="solid")+
-    
-    geom_text(data=ct_k12, aes(x=DATE, y=txt_y,
-                               label=event_label, descript=SHORT_DESCRIPT,
-              color=event_label), size=3)+
-    #scale_color_manual(values=c("black"))+
     geom_point(mapping=aes(x=DATE, y=dummy, fill=color_scale, score=SCORE),
                shape=22, size=2, color="transparent")+
     scale_fill_manual(values=color_v)+
@@ -224,6 +214,7 @@ days_diff = 10
 space_desc = 10
 label_position_offset = 0
 y_axis_max = 80
+k12_text_y = 60
 plot_time_interact(state, county, window_num, days_diff, space_desc,
-                   label_position_offset, y_axis_max)
+                   label_position_offset, y_axis_max,k12_text_y)
 ```

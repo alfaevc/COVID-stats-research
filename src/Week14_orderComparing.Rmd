@@ -106,18 +106,18 @@ for (i in (1: length(states))){
   state1_mask = which(!is.na(state1_data$EVENT_CATG_S) & state1_data$EVENT_CATG_S == event_order)
   #print(state1_mask)
   if(!identical(state1_mask, integer(0))){
-  state1_data = state1_data[(state1_mask-7):nrow(state1_data),]
+  state1_data = state1_data[(state1_mask-14):nrow(state1_data),]
   } else{
    states[i] = paste(states[i], "(NO MASK ORDER)")
   }
   #print(state1_data)
 
   state1_data$DAYS = state1_data$DATE
-  state1_data$DAYS = as.numeric(state1_data$DATE-state1_data$DATE[1]-7)
+  state1_data$DAYS = as.numeric(state1_data$DATE-state1_data$DATE[1]-14)
   master_df =rbind(master_df,state1_data)
   #states_df[i] = state1_data
   #states_mask[i] = state1_mask
-  print(master_df)
+  #print(master_df)
   
 }
 
