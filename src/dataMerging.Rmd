@@ -18,22 +18,15 @@ library(tidyverse)
 
 
 ```{r}
-covid = data.frame(read_csv("COVID_CASES_IA_KS_20201111wPop_public.csv"))
-covid.g1 = data.frame(read_excel("precoord_COVID_IA_CNTY_20201113.xlsx"))
+covid = data.frame(read_excel("COVID_ALL_G1_data_11242020_public.xlsx"))
+covid.g1 = data.frame(read_excel("JHU_COVID_CASESwPOP_20201004_public.xlsx"))
 ```
 
-```{r}
-head(covid)
-```
-
-```{r}
-head(covid.g1)
-```
 
 
 unify date syntax
 ```{r}
-covid$DATE = as.Date(covid$DATE, "%m/%d/%y")
+covid$DATE = as.Date(covid$DATE, "%m-%d-%y")
 covid.g1$DATE = as.Date(covid.g1$DATE, "%m-%d-%y")
 ```
 
@@ -61,7 +54,7 @@ clean.combined.data <- function(data, attrs) {
     data[, paste(name, ".x", sep="")] = NULL
     data[, paste(name, ".y", sep="")] = NULL
   }
-  return (dplyr::arrange(data, COUNTY, STATE, DATE))
+  return (dplyr::arrange(data, STATE, DATE))
 }
 ```
 
@@ -107,15 +100,13 @@ top_pop_states <- function(data, n=5) {
 
 
 ```{r}
-duplicated.attributes = c("STUSAB")
+duplicated.attributes = c("STUSAB", "LATITUDE", "LONGITUDE", "STATEFP")
 ```
 
 combine 2 data frames
 ```{r}
 covid.com = covid %>% full_join(covid.g1, by = c("STATE", "DATE"))
-head(covid.com)
 ```
-
 
 
 Sort data by state and then date
@@ -123,20 +114,10 @@ Sort data by state and then date
 covid.com = clean.combined.data(covid.com, duplicated.attributes)
 ```
 
-```{r}
-head(covid.com)
-```
 
 ```{r}
 covid.com = extend.attr(covid.com, c("SCORE"))
 ```
-
-
-```{r}
-which(!is.na(covid.com$EVENT_CATG))
-tail(covid.com[covid.com$COUNTY == "HENRY",c('DATE', 'SCORE')], 160)
-```
-
 
 
 ```{r}
