@@ -1,19 +1,4 @@
----
-title: "Week14_orderComparing"
-author: "Melody Ma"
-date: "12/2/2020"
-output: html_document
----
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r, message=FALSE, warning=FALSE, echo = FALSE}
 library(tidyverse)
@@ -62,10 +47,16 @@ data$event_MLER <- sapply(data$EVENT_CATG_S, FUN=group_event_catg)
 
 
 ```{r, warning=FALSE}
-states = c("WASHINGTON","MASSACHUSETTS","NEW YORK", "TEXAS", "COLORADO",
-           "MINNESOTA")
+northeast = c("MAINE","MASSACHUSETTS","RHODE ISLAND","CONNECTICUT",
+              "VERMONT","NEW YORK","PENNSYLVANIA",
+              "NEW JERSEY","DELAWARE","MARYLAND")
+southeast = c("WEST VIRGINIA","VIRGINIA","KENTUCKY",
+              "NORTH CAROLINA","ALABAMA")
+a=c("IOWA","MINNESOTA","WISCONSIN","ILLINOIS","NEBRASKA",
+           "KANSAS")
+states = c("MINNESOTA","WISCONSIN","ILLINOIS","KANSAS")
 
-event_order = "15M"
+event_order = "4E"
 master_df = data.frame(State=character(),
                        Date=as.Date(character()),
                        Events=character(),
