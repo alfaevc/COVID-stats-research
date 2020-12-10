@@ -1,0 +1,140 @@
+---
+title: "Week14_orderComparing"
+author: "Melody Ma"
+date: "12/2/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(ggfortify)
+library(ggseas)
+library(plotly)
+library(zoo)
+```
+
+## States Mask Order
+
+```{r, message=FALSE, warning=FALSE, echo = FALSE}
+# select state, date, event_catg_s, score, newcd_norm_599
+data <- read_csv("covid.com.csv") %>% 
+  select(c(2, 4:6, 18)) 
+
+# 15M stands for Mandatory Mask/Facecover Order
+# See README of COVID_ALL_G1.xlsx
+head(data[!is.na(data$EVENT_CATG_S) & data$EVENT_CATG_S == "15M",])
+```
+```{r}
+# function that splits event and find specific order
+check_event <- function(x){
+  orders = strsplit(x,",")[[1]]
+  return("15M" %in% orders)
+}
+
+# group event categories into easing/lifting and imposing
+group_event_catg <- function(x){
+  new_col = c()
+  check = substr(x, nchar(x), nchar(x))
+  if(check %in% c("M", "R", "A")){
+    new_col <- append(new_col, "Mandatory/Re-issued")
+  } else if (check %in% c("E", "L")){
+    new_col <- append(new_col, "Ease/Lifting")
+  } else {
+    new_col <- append(new_col, "")
+  }
+}
+
+data$event_MLER <- sapply(data$EVENT_CATG_S, FUN=group_event_catg)
+```
+
+
+```{r, warning=FALSE}
+states = c("WASHINGTON","MASSACHUSETTS","NEW YORK", "TEXAS", "COLORADO",
+           "MINNESOTA")
+
+event_order = "15M"
+master_df = data.frame(State=character(),
+                       Date=as.Date(character()),
+                       Events=character(),
+                       Score=numeric(),
+                       Newcd_norm=numeric(),
+                       Days = numeric(),
+                       Events_mler=character())
+
+for (i in (1: length(states))){
+  state_data <- data[data$STATE==states[i],]
+  # aggregate by state, date and combine events & values
+  state_data <- state_data %>%
+    group_by(STATE, DATE) %>%
+    summarise(Events = paste(EVENT_CATG_S, collapse = ","),
+              Score = mean(SCORE),
+              Newcd_norm = mean(NEWCD_NORM_500),
+              Events_mler = first(event_MLER))
+  # turn "NA" into NA
+  state_data$Events[state_data$Events=="NA"] <- NA
+  # index of order implementation date
+  state_mask_ind = which(sapply(state_data$Events, check_event)) 
+
+  # if a state never issues mask order then plot all data
+  # else the plot starts at the day of mask order
+  if(!identical(state_mask_ind, integer(0))){
+    state_data = state_data[(state_mask_ind-14):nrow(state_data),]
+  } else{
+   states[i] = paste(states[i], "(NO MASK ORDER)")
+  }
+
+  # number of days since implementation
+  state_data$Days = as.numeric(state_data$DATE-state_data$DATE[1]-14)
+  # append to final data for plotting
+  master_df = rbind(master_df,as.data.frame(state_data))
+}
+
+# add a new column of moving average
+# otherwise interactive plot cannot show date
+master_df$newcd_norm_moving <- rollmean(master_df$Newcd_norm, 7,
+                                fill=NA, align="right")
+event_master_df <- master_df[!is.na(master_df$Events) & (master_df$Events!="15M"),] 
+
+
+states_trend <- ggplot() +
+  geom_line(data = master_df, aes(x = Days, y = newcd_norm_moving,
+                                  color = STATE, Date=DATE, State=STATE),
+            size = 1, alpha = 0.7) +
+  geom_point(data = event_master_df, aes(x = Days, y = newcd_norm_moving,
+                                         Event = Events, Date=DATE,
+                                         State=STATE, shape=Events_mler),
+             alpha = 0.8) +
+  scale_color_discrete(name="")+
+  scale_shape_discrete(name="")+
+  xlab("Number of Days Since Mask Order") + ylab("Normalized Daily New Cases") +
+  theme_bw()
+
+interactive_p <- ggplotly(states_trend, tooltip=c("State", "Date", "Event"))
+
+# clean up legend
+
+
+for (i in 1:length(interactive_p$x$data)){
+    if (!is.null(interactive_p$x$data[[i]]$name)){
+        interactive_p$x$data[[i]]$name =  gsub("\\(","",str_split(interactive_p$x$data[[i]]$name,",")[[1]][1])
+    }
+}
+
+interactive_p
+```
+
+
+
