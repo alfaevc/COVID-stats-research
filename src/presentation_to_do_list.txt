@@ -1,0 +1,22 @@
+Order Comparison Visualization Modification:
+	- use new data for all visualizations
+	- dots representing orders same color as state
+	- increase shape size
+	- use Black X on Sept.7th as mark of school opening
+	- fix code so that if there is no mask order, skip the state
+	- solid black line at x=0
+	- turn 1L,2E... into words
+
+Time Series Plots can include: Washington, Kansas
+
+Presentation:
+	- Overview/goal
+	- what's the data. How was the data collected 
+	- graphs: time series (eg.tx,fl,la,pa,az) (states and IOWA counties-henry,winniston?)
+		-> comparing orders across states. good example 4E wisconsin 
+			take more than 30 days to see the affect
+		-> lag graphs
+		-> take home messages: take a while up till a month 
+	- spline models
+	- future work (towards ARMA) and working towards multi variable model
+send slides and html links so people can interact
