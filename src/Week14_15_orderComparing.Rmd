@@ -16,7 +16,7 @@ library(zoo)
 ```{r, message=FALSE, warning=FALSE, echo = FALSE}
 # select state, date, event_catg_s, score, newcd_norm_599
 data <- read_csv("covid.com.csv") %>% 
-  select(c(2, 4:6, 18)) 
+  select(c(2, 4:5, 18)) 
 
 # 15M stands for Mandatory Mask/Facecover Order
 # See README of COVID_ALL_G1.xlsx
@@ -54,16 +54,17 @@ southeast = c("WEST VIRGINIA","VIRGINIA","KENTUCKY",
               "NORTH CAROLINA","ALABAMA")
 a=c("IOWA","MINNESOTA","WISCONSIN","ILLINOIS","NEBRASKA",
            "KANSAS")
-states = c("MINNESOTA","WISCONSIN","ILLINOIS","KANSAS")
+b=c("MINNESOTA","WISCONSIN","ILLINOIS","KANSAS")
+states = a
 
-event_order = "4E"
+event_order = "15M" # can also try 4E
 master_df = data.frame(State=character(),
                        Date=as.Date(character()),
                        Events=character(),
-                       Score=numeric(),
                        Newcd_norm=numeric(),
                        Days = numeric(),
                        Events_mler=character())
+school_opening_df = data.frame()
 
 for (i in (1: length(states))){
   state_data <- data[data$STATE==states[i],]
@@ -71,7 +72,6 @@ for (i in (1: length(states))){
   state_data <- state_data %>%
     group_by(STATE, DATE) %>%
     summarise(Events = paste(EVENT_CATG_S, collapse = ","),
-              Score = mean(SCORE),
               Newcd_norm = mean(NEWCD_NORM_500),
               Events_mler = first(event_MLER))
   # turn "NA" into NA
@@ -81,17 +81,14 @@ for (i in (1: length(states))){
 
   # if a state never issues mask order then plot all data
   # else the plot starts at the day of mask order
-  if(!identical(state_mask_ind, integer(0))){
+  if(length(state_mask_ind)>0){
     state_data = state_data[(state_mask_ind-14):nrow(state_data),]
-  } else{
-   states[i] = paste(states[i], "(NO MASK ORDER)")
-  }
-
-  # number of days since implementation
-  state_data$Days = as.numeric(state_data$DATE-state_data$DATE[1]-14)
-  # append to final data for plotting
-  master_df = rbind(master_df,as.data.frame(state_data))
+    # number of days since implementation
+    state_data$Days = as.numeric(state_data$DATE-state_data$DATE[1]-14)
+    # append to final data for plotting
+    master_df = rbind(master_df,as.data.frame(state_data))}
 }
+
 
 # add a new column of moving average
 # otherwise interactive plot cannot show date
@@ -99,17 +96,26 @@ master_df$newcd_norm_moving <- rollmean(master_df$Newcd_norm, 7,
                                 fill=NA, align="right")
 event_master_df <- master_df[!is.na(master_df$Events) & (master_df$Events!="15M"),] 
 
+    # change Events_mler on September 14th to be School Opening
+school_opening_df <- as.data.frame(master_df[master_df$DATE=="2020-09-07",])
+school_opening_df$Events_mler <- "School Opening"
+
 
 states_trend <- ggplot() +
+  geom_vline(xintercept=0) +
   geom_line(data = master_df, aes(x = Days, y = newcd_norm_moving,
                                   color = STATE, Date=DATE, State=STATE),
-            size = 1, alpha = 0.7) +
+            size = 1, alpha = 0.5) +
   geom_point(data = event_master_df, aes(x = Days, y = newcd_norm_moving,
+                                         shape=Events_mler,
                                          Event = Events, Date=DATE,
-                                         State=STATE, shape=Events_mler),
-             alpha = 0.8) +
+                                         State=STATE, color=STATE),
+             alpha = 1, size=3) +
+  geom_point(data=school_opening_df, aes(x = Days, y = newcd_norm_moving,
+                                         shape = Events_mler),
+             size=3) +
+  scale_shape_manual(name="", values=c(16,17,4))+
   scale_color_discrete(name="")+
-  scale_shape_discrete(name="")+
   xlab("Number of Days Since Mask Order") + ylab("Normalized Daily New Cases") +
   theme_bw()
 
