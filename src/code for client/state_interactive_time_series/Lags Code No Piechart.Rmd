@@ -112,6 +112,8 @@ plot_lag <- function(state, lead_n){
     #                     labels=c("Eased", "Implemented", "Lifted", ""))+
     geom_line(data=data.frame(identity_x, identity_y),
               aes(x=identity_x, y=identity_y), linetype="dotted", size=1)+
+    xlim(0, 120) +
+    ylim(0, 300) +
     labs(title=paste(str_to_title(state),"lag", lead_n, "correlation=", corr), 
          x="Today's Norm New Confirmed Cases",
          y=paste("Normalized New Daily Cases", lead_n, "days later"))+
@@ -125,8 +127,8 @@ plot_lag <- function(state, lead_n){
 
 *****4. run plot functions in specified state and lag days
 ```{r, message=FALSE, warning=FALSE}
-state = "WASHINGTON"
-lag_day = 28
+state = "TEXAS"
+lag_day = 7
 plot_lag(state, lag_day) #function to plot - no need to change
 ```
 

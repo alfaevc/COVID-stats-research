@@ -79,7 +79,7 @@ southeast = c("WEST VIRGINIA","VIRGINIA","KENTUCKY",
               "NORTH CAROLINA","ALABAMA")
 states = c("FLORIDA","PENNSYLVANIA", "WISCONSIN","WASHINGTON")
 
-event_order = "15M" # can also try 4E
+event_order = "4E" # can also try 4E
 master_df = data.frame(State=character(),
                        Date=as.Date(character()),
                        Events=character(),
@@ -122,7 +122,7 @@ event_master_df <- master_df[!is.na(master_df$Events) &
 
     # change Events_mler on September 14th to be School Opening
 school_opening_df <- as.data.frame(master_df[master_df$DATE=="2020-09-07",])
-school_opening_df$Events_mler <- "School Opening"
+school_opening_df$Events_mler <- "Labor Day"
 
 
 states_trend <- ggplot() +
@@ -139,14 +139,14 @@ states_trend <- ggplot() +
   geom_point(data=school_opening_df, aes(x = Days, y = newcd_norm_moving,
                                          shape = Events_mler),
              size=3) +
-  scale_shape_manual(name="", values=c(16,17,4))+
   scale_color_discrete(name="")+
+  scale_shape_manual(name="", values=c(16,4,17))+
   xlab("Number of Days Since Mask Order") + 
   ylab("Normalized Daily New Cases") +
   ggtitle("Mask Order Time Series Comparison") +
   theme_bw()
 
-
+#states_trend
 interactive_p <- ggplotly(states_trend, tooltip=c("State", "Date", "Descript"))
 
 # clean up legend
