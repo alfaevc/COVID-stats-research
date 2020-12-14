@@ -283,7 +283,7 @@ covid.com = extend.attr(covid.com, c("SCORE"))
 
 ```{r}
 states = top_pop_states(covid)
-plot_states(covid.com, c("FLORIDA"), 'SCORE')
+plot_states(covid.com, c("FLORIDA"), 'NEWCD_NORM_500')
 ```
 
 ```{r}
