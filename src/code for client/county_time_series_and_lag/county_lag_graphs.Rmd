@@ -1,0 +1,158 @@
+1. import libraries and and dataset
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(plotly)
+library(ggfortify)
+library(ggseas)
+library(chron)
+data <- read.csv("county_merge.csv",
+                 colClasses = "character") %>% 
+  select(c(2,3,4,9:12,17,18,19,20,21,22,23,24,25))
+
+county_dt <- read.csv("USA_Counties_Data.csv",
+                      colClasses = "character") %>% 
+  select(c(2,3,7))
+```
+
+2. preprocess data
+```{r}
+# change cols format
+data$DATE <- as.Date(data$DATE)
+for (i in c(4:12,15)){
+  data[,i]<- as.numeric(data[,i])
+}
+
+county_dt$POPULATION.2017. <- as.numeric(county_dt$POPULATION.2017.)
+# change county data to all caps
+county_dt$NAME <- toupper(county_dt$NAME)
+county_dt$STATE_NAME <- toupper(county_dt$STATE_NAME)
+colnames(county_dt) <- c("COUNTY","STATE", "POPULATION")
+
+data <- inner_join(data, county_dt, by=c("COUNTY", "STATE")) 
+```
+rescale data
+```{r}
+data$CUMCD_NORM_500 <- round(data$CUMCONFIRMED/(data$POPULATION/50000))
+data$NEWCD_NORM_500 <- round(data$NEWCONFIRMED/(data$POPULATION/50000))
+data$CUMDEATHS_NORM_500 <- round(data$CUMDEATHS/(data$POPULATION/50000))
+data$NEWDEATHS_NORM_500 <- round(data$NEWDEATHS/(data$POPULATION/50000))
+```
+
+```{r}
+
+
+# group event categories into easing/lifting and imposing
+group_event_catg <- function(x){
+  new_col = c()
+  check = substr(x, nchar(x), nchar(x))
+  if(check %in% c("M", "R", "3")){
+    new_col <- append(new_col, "Mandatory/Recommended")
+  } else if (check %in% c("E", "L")){
+    new_col <- append(new_col, "Ease/Lifting")
+  } else {
+    new_col <- append(new_col, "")
+  }
+}
+
+data$event_MELR <- sapply(data$EVENT_CATG, FUN=group_event_catg)
+
+
+# category number
+big_catg <- function(x){
+  new_col = c()
+  if (is.na(x)){
+    new_col <- append(new_col, "No Event")
+  } 
+  else if(x %in% c("15COM","15CYM","15M2","15M3")){
+    new_col <- append(new_col, "Face Covering")
+  } else if(grepl("2", x)){
+    new_col <- append(new_col, "Business Restrictions")
+  } else if(grepl("3", x)){
+    new_col <- append(new_col, "Indoor Gathering Restrictions")
+  } else if(grepl("4", x)){
+    new_col <- append(new_col, "Restaurant/Bar Restrictions")
+  } else{
+    new_col <- append(new_col, "Stay at Home Orders")
+  }
+}
+
+lag_catg <- function(x){
+  new_col = c()
+  check = substr(x, nchar(x), nchar(x))
+  if (is.na(check)){
+    new_col <- append(new_col, "No Event")
+  }else if(check %in% c("M", "R", "I")){
+    new_col <- append(new_col, "Implemented")
+  } else if (check == "E"){
+    new_col <- append(new_col, "Eased")
+  } else if (check == "L"){
+    new_col <- append(new_col, "Lifted")
+  } else {
+    new_col <- append(new_col, "No Event")
+  }
+}
+
+data$lag_catg <- sapply(data$EVENT_CATG, FUN=lag_catg)
+
+
+data$big_cat <- sapply(data$EVENT_CATG, FUN=big_catg)
+data$event <- paste(data$big_cat, data$event_MELR)
+
+data$SHORT_DESCRIPT[is.na(data$SHORT_DESCRIPT)] <- "No Event"
+
+```
+
+
+3. create an interactive version function for lag
+```{r}
+plot_lag_interact <- function(county, state, lead_n){
+  ct_data <- data[data$STATE==state & data$COUNTY==county,]
+
+  identity_x <- seq(0, max(na.omit(ct_data$NEWCD_NORM_500)), by=1)
+  identity_y <- identity_x
+  
+  corr <- round(acf(na.omit(ct_data$NEWCD_NORM_500), lag.max=lead_n,
+                    plot=FALSE)[lead_n]$acf[1], digits=2)
+  
+  
+  ct_data$n_lead = rep(NA, nrow(ct_data))
+  for (i in 1:(nrow(ct_data)-lead_n-2)){
+    today = ct_data[i, 3]
+    n_day_after = today+lead_n
+    inst = ct_data[as.character(ct_data$DATE)==as.character(n_day_after),]
+    ct_data$n_lead[i] = inst$NEWCD_NORM_500
+  }
+  
+  plot2 <- ggplot(data=ct_data)+
+    geom_point(aes(x=NEWCD_NORM_500, y=n_lead, col=as.factor(lag_catg),
+                   text=paste("Date of x-axis:", DATE,
+                              "\nDate of y-axis:", DATE+lead_n,
+                              "\nEvent:", event,
+                              "\nDescription:", SHORT_DESCRIPT)), size=2,
+               alpha=0.8)+
+    scale_color_manual(values=c("#f2615d", "#2d1160","#ffd799","#d9d9d9"),
+                       name="Event Category")+
+    geom_line(data=data.frame(identity_x, identity_y),
+              aes(x=identity_x, y=identity_y), linetype="dotted", size=1)+
+    labs(title=paste(str_to_title(state),"lag", lead_n, "correlation=", corr), 
+         x="Today's Norm New Confirmed Cases",
+         y=paste("Normalized New Daily Cases", lead_n, "days later"))+
+    theme_bw()
+  ggplotly(plot2, tooltip="text")
+  
+}
+```
+
+
+
+**4. run interactive lag plot functions with specified state and lag days
+```{r, message=FALSE, warning=FALSE}
+state = "IOWA"
+county = "POLK"
+lag = 60
+plot_lag_interact(county, state, lag)
+```
+
