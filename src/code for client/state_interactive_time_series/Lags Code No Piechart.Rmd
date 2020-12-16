@@ -128,7 +128,7 @@ plot_lag <- function(state, lead_n){
 *****4. run plot functions in specified state and lag days
 ```{r, message=FALSE, warning=FALSE}
 state = "TEXAS"
-lag_day = 7
+lag_day = 30
 plot_lag(state, lag_day) #function to plot - no need to change
 ```
 
