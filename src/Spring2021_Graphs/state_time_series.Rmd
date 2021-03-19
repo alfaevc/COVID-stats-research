@@ -1,0 +1,256 @@
+1. import libraries and and dataset - no need to change
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(ggseas)
+library(chron)
+```
+
+read and select data
+```{r, warning=FALSE,message=FALSE}
+data <- read_csv("State_Cases_G1_Merged_01112021.csv") %>% 
+  select(c("STATE", "DATE", "NEWCONFIRMED", "EVENT_CATG_S",
+           "SCORE", "SHORT_DESCRIPT"))
+state_pop_dt <- read_csv("USA_States_Data.csv") %>% 
+  select(c("STATE_NAME", "POPULATION"))
+```
+
+
+2. preprocess data - join population and covid data
+```{r}
+# change state population data state_name to all caps
+state_pop_dt$STATE_NAME <- toupper(state_pop_dt$STATE_NAME)
+
+# change colum names
+colnames(data) <- c("State", "Date", "New_Confirmed", "Event_Catg_S","Score", "Short_Description")
+colnames(state_pop_dt) <- c("State", "Population")
+
+# join covid and populaton data
+data <- inner_join(data, state_pop_dt, by=c("State")) 
+data$Date <- as.Date(data$Date, format="%m/%d/%Y")
+```
+
+rescale data into 500 normalized
+```{r}
+data$`New Cases/500,000 ppl`<-
+  round(data$New_Confirmed/(data$Population/500000))
+```
+
+
+preprocess data - event categories
+```{r}
+# add score line
+data$dummy <- -10
+
+# change category events name
+# group event categories into easing/lifting and imposing
+create_melr_catg <- function(x){
+  new_col = c()
+  check = substr(x, nchar(x), nchar(x))
+  if (is.na(check)){
+    new_col <- append(new_col, x)
+  } else if(check %in% c("M","A","I")){
+    new_col <- append(new_col, "Mandatory")
+  } else if (check == "R"){
+    new_col <- append(new_col, "Re-Issued")
+  } else if (check == "E"){
+    new_col <- append(new_col, "Eased")
+  } else if (check == "L"){
+    new_col <- append(new_col, "Lifted")
+  } 
+}
+data$event_MELR <- sapply(data$Event_Catg_S,
+                                    FUN=create_melr_catg)
+# category num
+create_event_catg <- function(x){
+  new_col = c()
+  if (is.na(x)){
+    new_col <- append(new_col, x)
+  } 
+  else if(x=="15M"){
+    new_col <- append(new_col, "Face\nCovering")
+  } else if(grepl("2", x)){
+    new_col <- append(new_col, "Business\nRestrictions")
+  } else if(grepl("3", x)){
+    new_col <- append(new_col, "Indoor Gathering\nRestrictions")
+  } else if(grepl("4", x)){
+    new_col <- append(new_col, "Restaurant/Bar\nRestrictions")
+  } else{
+    new_col <- append(new_col, "Stay at\nHome Orders")
+  }
+}
+
+data$big_cat <- sapply(data$Event_Catg_S, FUN=create_event_catg)
+data$Event_ <- paste(data$big_cat, "\n", data$event_MELR, sep="")
+data$Event_[data$Event_=="NA\nNA"] <- NA
+
+
+
+```
+```{r}
+# remove rows if date is NA
+data <- data[!is.na(data$Date),]
+# find 9/7 for labor day
+data[data$Date=="2020-09-07",]$Event_ <- "Labor Day"
+# find 12/11 for Pfizer vaccine
+data[data$Date=="2020-12-11",]$Event_ <- 
+  "Pfizer Vaccine\nApproved for\nUSA Distribution"
+data[data$Date=="2020-12-18",]$Event_ <-
+  "Moderna Vaccine\nApproved for\nUSA Distribution"
+data$Event <- gsub("\r?\n|\r", " ", data$Event_) # show up in tooltip
+```
+
+```{r}
+# text color bins
+bins <- c(-Inf,0,0.25,0.75,1.20,1.55,1.85,2.10,2.35,2.70,3.05,3.40,3.75,
+          4.00, 5.00)
+data$color_scale <- cut(data$Score, breaks=bins)
+color_v <- c("#ffffff","#fdfec0", "#fdffa3","#ffd799", "#ffb078","#fc8861",
+             "#f2615d","#d8466c","#87377a","#942c81","#721f82","#51127c",
+             "#2d1160","#ffd3d1","#100c2E")
+
+data$Event_ <- as.factor(data$Event_)
+color_event_v <- c("Business\nRestrictions\nEased"="#008000",
+                   "Business\nRestrictions\nLifted"="#008000",
+                   "Business\nRestrictions\nMandatory"="#f2534e",
+                   "Business\nRestrictions\nRe-Issued"="#f53731",
+                   "Face\nCovering\nMandatory"="#db211a",
+                   "Indoor Gathering\nRestrictions\nEased"="#008000",
+                   "Indoor Gathering\nRestrictions\nLifted"="#008000",
+                   "Indoor Gathering\nRestrictions\nMandatory"="#bf1b15",
+                  "Indoor Gathering\nRestrictions\nRe-Issued"="#ad1711",
+                  "Restaurant/Bar\nRestrictions\nEased"="#008000",
+                  "Restaurant/Bar\nRestrictions\nLifted"="#008000",
+                  "Restaurant/Bar\nRestrictions\nMandatory"="#c90902",
+                  "Restaurant/Bar\nRestrictions\nRe-Issued"="#a60903",
+                  "Stay at\nHome Orders\nLifted"="#008000",
+                  "Stay at\nHome Orders\nMandatory"="#e05651",
+                  "Labor Day"="black",
+                  "Moderna Vaccine\nApproved for\nUSA Distribution"="black",
+                  "Pfizer Vaccine\nApproved for\nUSA Distribution"="black")
+
+names(color_v) = levels(data$color_scale)
+
+
+text_y_pos <- function(state_event, days_diff, space_decs,
+                       label_position_offset){
+  y_pos_vec = c(max(
+    state_event[,"New Cases/500,000 ppl"])+label_position_offset)
+  for (i in 2:nrow(state_event)){
+    diff = state_event[i,"Date"] - state_event[i-1,"Date"]
+    if (as.integer(diff)<days_diff){
+      tmp = y_pos_vec[i-1]-space_decs
+       y_pos_vec = append(y_pos_vec, tmp)
+    } else {
+      y_pos_vec = append(y_pos_vec,
+                         max(state_event[,"New Cases/500,000 ppl"])+
+                           label_position_offset)
+    }
+  }
+  return(y_pos_vec)
+}
+
+```
+
+
+3. Create an interactive version for the time trend - no need to change
+```{r, message=FALSE, warning=FALSE}
+
+plot_time_interact <- function(state, window_num, days_diff, space_desc,
+                   label_position_offset, y_axis_max,
+                   no_score_legend_lower, no_score_legend_upper){
+  state_data <- data[data$State==state,]
+  state_event <- state_data[!is.na(state_data$Event_),]
+  state_event_date <- state_event$Date
+  state_event$txt_y <- text_y_pos(state_event, days_diff, space_decs,
+                       label_position_offset)
+
+  p <- ggplot(state_data, aes(Date, `New Cases/500,000 ppl`,
+                              label1=Date)) +
+    geom_point(aes(label2=`New Cases/500,000 ppl`),size=2, alpha=1) + 
+    stat_rollapplyr(width = window_num, align = "right", size = 2,
+                    col="gray", alpha=1)+
+    geom_point(mapping=aes(x=Date, y=dummy, fill=color_scale,
+                           label3=Score), shape=22, size=2,
+               color="transparent")+
+    scale_fill_manual(values=color_v, name="")+
+    scale_color_manual(values=color_event_v, name="")+
+    geom_vline(data=state_event,
+               aes(xintercept=as.numeric(Date), color=Event_), 
+               linetype="dotted")+
+    geom_text(data=state_event, aes(x=Date, y=txt_y, color=Event_,
+                                    label=paste("<b>",
+                                                as.character(Event_),
+                                                "</b>"),
+                                    #label=as.character(Event_),
+                                    label4=Event,
+                                    label5=Short_Description),
+              size=3)+
+    ylim(-15, y_axis_max)+
+    theme(legend.title=element_blank())+
+    theme_bw()+
+
+    labs(x = "Months", y = "New Daily Cases Normalized")+
+    scale_x_date(date_breaks = "months" , date_labels = "%b")+
+    ggtitle(paste(state, ",",window_num, "Days Rolling Average")) 
+    
+  interactive_p <- ggplotly(p,
+                     tooltip=c("label1","label2","label3","label4",
+                               "label5")) %>% 
+    layout(legend=list(title=list(text='<b> Orders</b>')))
+  
+  interactive_p<- style(interactive_p, showlegend = FALSE,
+                 traces=c(no_score_legend_lower:no_score_legend_upper))
+  
+  for (i in 1:length(interactive_p$x$data)){
+    if (!is.null(interactive_p$x$data[[i]]$name)){
+        interactive_p$x$data[[i]]$name = 
+          gsub("\\(","",str_split(interactive_p$x$data[[i]]$name,",")[[1]][1])
+    }
+}
+  interactive_p
+
+}
+
+```
+
+
+
+***** 4. run interactive time series plot with specified state and window
+change variables for different states, moving average window, and aesthetic
+```{r, message=FALSE, warning=FALSE}
+# identify which individual state
+state = "WISCONSIN"
+# identify the window(days) for moving averages
+window_num = 6
+
+# the next four variables are for aesthetic only 
+# changing these variables can lesson the problems of text overlapping
+
+# if days_diff is too small, all the neighboring intervention texts will overlap
+days_diff = 15
+# identify how much we want to separate this intervention text from last
+# intervention text
+space_decs = 110
+# y position of highest text label
+label_position_offset = 460
+# y axis max height
+y_axis_max = 900
+no_score_legend_lower = 1 #no need to change
+no_score_legend_upper = 9 #start with 7 or smaller, if score legend included, gradually increase
+
+# function to plog interactive time series - no need to change
+
+p <- plot_time_interact(state, window_num, days_diff, space_desc,
+                   label_position_offset, y_axis_max,
+                   no_score_legend_lower, no_score_legend_upper)
+htmlwidgets::saveWidget(as_widget(p),
+                        paste(tolower(state),"_interactive.html",sep=""))
+```
+
+
+
+

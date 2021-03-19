@@ -1,0 +1,38 @@
+import library
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(plotly)
+```
+
+import data
+```{r}
+dt <- read_excel("UKbyAge_Groupedxn.xlsx") %>% 
+  na.omit()
+
+dt$date <- as.Date(dt$date, format="%Y-%m-%d")
+```
+
+
+non-interactive graph
+```{r}
+scale <- max(dt$`00_90+`)/max(dt$`15_24/total(%)`, na.rm=TRUE)
+p <- ggplot(data=dt) +
+  geom_bar(aes(x=date, y=`15_24/total(%)`), stat="identity",
+           col="#92C88D",
+           alpha=0.1)+
+  geom_bar(aes(x=date, y=`05_14/total(%)`), stat="identity",
+           col="#2181FF",
+           alpha=0.1)+
+  geom_line(aes(x=date, y=`00_90+`/scale)) +
+  #geom_bar(aes(y=`25_59/total(%)`)) +
+  scale_y_continuous(
+    name = "% of Daily Cases by Age Groups",
+    sec.axis = sec_axis(~.*scale,
+                        name="New Daily Cases for Entire Population"))+
+   theme_bw()
+p
+#ggplotly(p)
+```
+
